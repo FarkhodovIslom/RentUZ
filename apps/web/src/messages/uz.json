@@ -1,0 +1,51 @@
+{
+  "common": {
+    "comingSoonTitle": "Tez orada",
+    "comingSoonDescription": "Bu bo'lim keyingi fazalarda ishga tushadi.",
+    "backHome": "Bosh sahifaga qaytish",
+    "loading": "Yuklanmoqda..."
+  },
+  "nav": {
+    "home": "Bosh sahifa",
+    "rentals": "Ijaralar",
+    "map": "Xarita",
+    "saved": "Saqlangan",
+    "profile": "Profil",
+    "login": "Kirish"
+  },
+  "home": {
+    "badge": "O'zbekistonning zamonaviy ijara bozori",
+    "hero": {
+      "title": "O'zingizga mos uyni oson toping.",
+      "subtitle": "O'zbekistondagi ijara uylarini narx, hudud va sharoit bo'yicha bir joydan izlang."
+    },
+    "search": {
+      "label": "Qayerdan",
+      "placeholder": "Shahar yoki hudud: Toshkent, Samarqand…",
+      "cta": "Qidirish"
+    },
+    "trust": {
+      "verified": {
+        "title": "Tasdiqlangan e'lonlar",
+        "description": "Har bir e'lon moderatsiyadan o'tadi."
+      },
+      "easy": {
+        "title": "Qulay qidiruv",
+        "description": "Narx, hudud va xonalar soni bo'yicha filtrlang."
+      },
+      "map": {
+        "title": "Xarita orqali izlash",
+        "description": "Uylarni joylashuv bo'yicha xaritada ko'ring."
+      },
+      "contact": {
+        "title": "To'g'ridan-to'g'ri aloqa",
+        "description": "Uy egasi bilan chat orqali bog'laning."
+      }
+    },
+    "footer": "© 2026 RentUZ. Barcha huquqlar himoyalangan."
+  },
+  "notFound": {
+    "title": "Sahifa topilmadi",
+    "description": "Siz izlagan sahifa mavjud emas yoki o'chirilgan bo'lishi mumkin."
+  }
+}

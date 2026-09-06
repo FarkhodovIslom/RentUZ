@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@import '@rentuz/ui/tokens.css';
+
+/* Primitives live in the workspace UI package — scan them for class usage */
+@source '../../../../packages/ui/src';
+
+:root {
+  color-scheme: dark;
+}
+
+/* Visible focus everywhere (spec §7 accessibility) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

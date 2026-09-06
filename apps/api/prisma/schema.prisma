@@ -1,0 +1,15 @@
+// RentUZ Phase 0 schema: datasource + generator only (models land in Phase 1).
+// The first migration creates the `extensions` schema + PostGIS so the Prisma
+// shadow database receives them as well (context/0_Phase.md §2, Geo decision).
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}

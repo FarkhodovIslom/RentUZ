@@ -1,0 +1,23 @@
+{
+  "name": "rentuz",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:deploy": "pnpm --filter api db:deploy",
+    "db:seed": "pnpm --filter api db:seed"
+  },
+  "devDependencies": {
+    "prettier": "3.9.6",
+    "turbo": "2.10.12"
+  }
+}

@@ -59,8 +59,15 @@ Install with `pnpm add -E <pkg>@<version>`. **Never install bare `prisma`** — 
 | nestjs-pino / pino / pino-http | `5.1.0` / `10.3.1` / `11.0.0` | JSON logs (nestjs-pino supports Nest 12) |
 | helmet | `8.3.0` | |
 | @aws-sdk/client-s3 + s3-request-presigned | latest stable at install | Pin exact and record here |
-| @hookform/resolvers | latest stable at install | Pin exact and record here |
-| @nestjs/config | v12 line at install | Standard Schema validation of env; pin exact |
+| @hookform/resolvers | `5.9.1` | Pinned in Phase 1 (with react-hook-form `7.87.0`) |
+| @nestjs/config | `12.0.0` | Standard Schema validation of env |
+| @nestjs/jwt | `12.0.1` | Peers include Nest 12 (verified) |
+| argon2 | `0.45.1` | Argon2id password hashing |
+| cookie-parser | `1.4.7` | `@nestjs/cookie-parser` does NOT exist (404) — plain express middleware |
+| rate-limiter-flexible | `11.2.0` | Replaces @nestjs/throttler (trap 2) |
+| @swc/core | `1.16.2` | Custom build script (trap 5) — `@nestjs/cli@12` itself is broken on Node 22.14 |
+| dotenv | `17.2.3` | prisma.config.ts CLI env loading |
+| supertest / @types/supertest | `7.1.4` / `6.0.3` | Integration tests |
 | recharts | `3.10.1` | Owner/admin analytics charts |
 | date-fns / tz handling | `4.4.0` + `@date-fns/tz` | UTC storage, Asia/Tashkent display |
 | turbo | `2.10.12` | Monorepo tasks |
@@ -70,23 +77,25 @@ Install with `pnpm add -E <pkg>@<version>`. **Never install bare `prisma`** — 
 
 ### Compatibility traps (verified; workarounds are locked)
 
-1. **`nestjs-zod` is NOT used** — its peer range stops at Nest 11. Use Nest 12 native Standard Schema: `@Body({ schema: zodSchema })` with `StandardSchemaValidationPipe`. OpenAPI: `@nestjs/swagger@12` ships `standardSchemaConverter` — **Phase 0 spike** must confirm Zod→OpenAPI generation; fallback is manual `zod-openapi` registration into the Swagger document.
-2. **`@nestjs/throttler` is NOT used** — peer range stops at Nest 11. Custom `RedisService` guard on `rate-limiter-flexible` + `ioredis` (gives distributed limiting across instances, which we need anyway).
-3. **Prisma + PostGIS**: `geography(Point,4326)` is `@db.Unsupported(...)` in Prisma — all geo reads/writes/queries are **raw SQL**, contained in `apps/api/src/modules/properties/geo.repository.ts` and `search.repository.ts` only.
+1. **`nestjs-zod` is NOT used** — its peer range stops at Nest 11. Nest 12 native Standard Schema works: `@Body({ schema: zodSchema })` + a **global `StandardSchemaValidationPipe`** registered in `main.ts` (`app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }))`). Without the global pipe the schema metadata is ignored (requests pass through unvalidated) — verified in Phase 1 integration tests. OpenAPI: `@nestjs/swagger@12` does NOT surface Standard Schema request bodies through `createDocument`; **resolution (Phase 1)**: register DTOs into `components.schemas` via **Zod 4's native `z.toJSONSchema(schema)`** (no `zod-openapi` dependency — its v6 API no longer exports `extendsZodWithOpenApi` and requires a registry), then wire `$ref`s onto the auth path `requestBody`s. See `apps/api/src/main.ts`.
+2. **`@nestjs/throttler` is NOT used** — peer range stops at Nest 11. Custom `ThrottleGuard` on `rate-limiter-flexible` + `ioredis` (gives distributed limiting across instances, which we need anyway). `@Throttle({ key, points, duration })` decorator metadata; `DISABLE_THROTTLE=true` disables it for integration tests that legitimately exceed limits (e.g. the 10-failed-logins lockout case).
+3. **Prisma + PostGIS**: `geography(Point,4326)` is `@db.Unsupported(...)` in Prisma — all geo reads/writes/queries are **raw SQL**, contained in `apps/api/src/modules/properties/geo.repository.ts` and `search.repository.ts` only. **Migration caveat (Phase 1, locked)**: PostGIS types live in the `extensions` schema; the migration connection does NOT inherit the URL `search_path`, so every hand-written migration that touches geo types must start with `SET search_path = public, extensions;` (see `20260906112211_auth_core/migration.sql`). Prisma also names tables **camelCase** (`"rentalRequests"`, not snake_case) — raw SQL in migrations must match.
 4. **Prisma 7 driver adapter (Phase 0 outcome, **locked**)**: Prisma 7 removed `url = env(...)` from `schema.prisma`. Migrations go through `DATABASE_DIRECT_URL` in `prisma.config.ts`; runtime uses `@prisma/adapter-pg` with `DATABASE_URL`. Code:
    ```ts
    // apps/api/src/prisma/prisma.service.ts
    super({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
    ```
-5. **Nest 12 ESM DI metadata trap (Phase 0 outcome, **locked**)**: `tsc --module nodenext` output makes `design:paramtypes` collapse to `Function` placeholders at runtime, so `PrismaService`/`RedisService` cannot be resolved. Setting `useDefineForClassFields: false` is not enough on its own. **Phase 0 ships with `tsx` as the runtime**: `pnpm dev` and `pnpm start` both invoke `tsx src/main.ts`. `tsc` is used only for typechecking. The production build path (Phase 1+) will use **`@nestjs/cli` + `@swc/core`** to compile — `nest build --webpack --webpackConfigPath` emits an ESM bundle that preserves the class metadata. The Web app uses `next build` (no issue) and `packages/contracts` ships compiled `dist/` (no issue).
-6. **Supabase pooling**: migrations use the **direct** URL (port 5432); runtime uses the **pooler** URL (port 6543, `pgbouncer=true`) so prepared statements are disabled on the pooled path.
-7. **Vercel cannot proxy WebSockets** — browser connects to the API origin directly for chat, authenticated by a 60 s single-use socket ticket (Phase 5).
-8. **ioredis 6 named export** — `import { Redis } from 'ioredis'`, not the older `import Redis from 'ioredis'` default import.
-9. **TS 6 + `module: nodenext` in `extends`-chain tsconfigs** — Prisma's CLI does not resolve workspace `exports`-based extends. All tsconfigs use a **relative path** in `extends` (`../../packages/config/...`). The `eslint.base` config continues to use `@rentuz/config/eslint.base` (ESLint resolves `exports` correctly).
-10. **TS 6 + `module: nodenext` workspace imports** — every consuming package (api, web, ui, contracts) needs `@rentuz/config` as a devDependency, otherwise pnpm's strict resolution fails the eslint config import.
-11. **Zod enums referenced from tests** — schemas (`errorCodeSchema`, `domainErrorCodeSchema`) must be exported from the same file as the const arrays they wrap, or the consuming test file imports break.
-12. **Unused vars** — ESLint flags all imports/vars; unused `Navbar`/`ctaLinkClass` in Phase 0 public/auth pages are deleted; future code that imports a component for type-only must use `import type`.
-13. **No `next lint`** in Next 16 — ESLint flat config lives in `apps/web/eslint.config.mjs` and `pnpm lint` invokes it directly.
+   `prisma.config.ts` must `import 'dotenv/config'` itself — the Prisma 7 CLI does not load `.env` files. Local dev db is on **host port 5434** (5432/5433 are taken by other projects on this machine).
+5. **Nest 12 ESM DI metadata trap (Phase 0→1 outcome, **resolved in Phase 1**) — `tsx` is NOT a viable runtime**: tsx (esbuild) never emits decorator metadata, so constructor injection silently gets `undefined` (fails even a minimal 2-provider Nest module). `@nestjs/cli@12` is also broken on Node 22.14 (`ERR_REQUIRE_CYCLE_MODULE` in ora/@angular-devkit). **The API runs from a custom SWC build**: `apps/api/scripts/build.mjs` compiles `src/` + the generated Prisma client (Prisma 7 emits TS!) to ESM `dist/` with `legacyDecorator + decoratorMetadata`. Scripts: `build = prisma generate && node scripts/build.mjs`, `start = node dist/main.js`, `dev = node scripts/build.mjs && node --watch dist/main.js`. `tsc` is typecheck-only. **DI value-imports**: every constructor-injected class must be a VALUE import (`import { PrismaService }`), never `import type` — the api eslint config disables `consistent-type-imports` for exactly this reason. Type-only companions for decorated signatures use the `import type { X }` sibling-import pattern.
+6. **Nest decorator ORDER matters**: `@Controller()` (and `@Injectable()`-adjacent class decorators like `@Public()`) must be applied AFTER custom metadata decorators — i.e. `@ApiTags` → `@Controller()` → `@Public()`, otherwise class-level `@Public()` is invisible to `Reflector.getAllAndOverride` and public routes return 401 (verified: `/health` was locked out until reordered).
+7. **Supabase pooling**: migrations use the **direct** URL (port 5432); runtime uses the **pooler** URL (port 6543, `pgbouncer=true`) so prepared statements are disabled on the pooled path.
+8. **Vercel cannot proxy WebSockets** — browser connects to the API origin directly for chat, authenticated by a 60 s single-use socket ticket (Phase 5).
+9. **ioredis 6 named export** — `import { Redis } from 'ioredis'`, not the older `import Redis from 'ioredis'` default import.
+10. **TS 6 + `module: nodenext` in `extends`-chain tsconfigs** — Prisma's CLI does not resolve workspace `exports`-based extends. All tsconfigs use a **relative path** in `extends` (`../../packages/config/...`). The `eslint.base` config continues to use `@rentuz/config/eslint.base` (ESLint resolves `exports` correctly).
+11. **TS 6 + `module: nodenext` workspace imports** — every consuming package (api, web, ui, contracts) needs `@rentuz/config` as a devDependency, otherwise pnpm's strict resolution fails the eslint config import.
+12. **Zod enums referenced from tests** — schemas (`errorCodeSchema`, `domainErrorCodeSchema`) must be exported from the same file as the const arrays they wrap, or the consuming test file imports break.
+13. **Test apps must mirror `main.ts`** — integration boots (`NestFactory.create` in tests) must re-apply `cookieParser()` + `StandardSchemaValidationPipe` + `setGlobalPrefix('api/v1', ...)`, or refresh-cookie tests 401 and validation tests see unvalidated bodies.
+14. **No `next lint`** in Next 16 — ESLint flat config lives in `apps/web/eslint.config.mjs` and `pnpm lint` invokes it directly.
 
 ---
 
@@ -268,7 +277,7 @@ On PR + push to `main` (§77): `pnpm install` (cached) → `turbo lint` → `tur
 
 **Definition of Done (Phase 0)**: `docker compose up -d && pnpm install && pnpm dev` starts API (`:4000/health` → `{"success":true}`) and web (`:3000` renders dark shell in uz); `pnpm lint && pnpm typecheck && pnpm test && pnpm build` pass; CI green; spike result recorded; exact versions of resolve-at-install packages appended to the table in §1.
 
-**Phase 0 outcomes (verified 2026-09-06)**: all 11 unit tests pass, `pnpm lint` and `pnpm typecheck` are green across the workspace, `pnpm --filter web build` pre-renders 6 static routes, and the API `tsx` boot answers `GET :4000/health → 200` and `GET :4000/ready → 503` (the latter is correct: db/redis are down without docker). Two architecture decisions changed in light of Phase 0 work and are reflected in §1: Nest 12 ESM runtime is shipped via `tsx` (not `tsc`) until the SWC build path lands in Phase 1, and `nestjs-pino` is deferred in favour of Nest's built-in `Logger` (the `pino-params` `ApplicationConfig` injection is not currently compatible with this Nest 12 patch).
+**Phase 0 outcomes (verified 2026-09-06; superseded by Phase 1 where noted)**: all 11 unit tests pass, `pnpm lint` and `pnpm typecheck` are green across the workspace, `pnpm --filter web build` pre-renders 6 static routes, and the API boot answered `GET :4000/health → 200` and `GET :4000/ready → 503` (the latter is correct: db/redis are down without docker). Two Phase 0 decisions were reversed in Phase 1 and the traps above are updated accordingly: the API runtime moved from `tsx` to a **custom SWC build** (`scripts/build.mjs` — tsx never emits decorator metadata), and `nestjs-pino` stays deferred in favour of Nest's built-in `Logger`.
 
 **Spike — Zod→OpenAPI (`@nestjs/swagger@12.0.1`)** ❌: the `standardSchemaConverter` hook exists internally on `SwaggerExplorer` but is **not** passed through `SwaggerModule.createDocument(app, config, options)` — only `SwaggerDocumentOptions` is accepted, and the explorer instantiates its own converter. **Phase 1 must use the documented fallback** from §1 trap #1: manual `zod-openapi` (or `@hono/zod-openapi`) registration, called in `main.ts` after `SwaggerModule.createDocument` to mutate the `paths` and `components.schemas` of the document. This is concrete work, not a future risk.
 

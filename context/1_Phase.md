@@ -61,7 +61,7 @@ Phone provider integration (Eskiz/Play Mobile — pre-launch), password complexi
 24. `apps/api/src/modules/users/users.module.ts`, `users.controller.ts`, `users.service.ts`, `dto/*.ts`.
 25. `GET /users/me` — return current user (id, name, phone, email, avatar, role, isPhoneVerified, canListProperties, status, createdAt). Never return `passwordHash`.
 26. `PATCH /users/me` — partial update of name/email (email format + uniqueness).
-27. `PATCH /users/me/avatar` — multipart upload (single image). Reuses the image pipeline from Phase 2 (define the storage abstraction now, image processing module lives in `common/services/image.service.ts` so users avatars work without Phase 2's property wizard). Avatar: max 5 MB, WebP 256/128/64 variants.
+27. ~~`PATCH /users/me/avatar`~~ — **deferred to Phase 2** (user decision, 2026-09-06): the storage abstraction + sharp pipeline is built once with property images; avatar reuses it. `users.avatar` column exists from day one and stays null.
 
 ### 1.6 Web — BFF proxy
 28. `apps/web/src/app/api/v1/[...path]/route.ts` — implements all methods. Steps: read `Cookie` from incoming request → fetch `INTERNAL_API_URL/<path>` with same method/body/headers (forwards `cookie`, `content-type`, `accept`, `accept-language`, `x-forwarded-for`) → copy response headers, **strip `set-cookie`'s `Domain=` attribute** and ensure `Path=/`, `SameSite=Lax`, `Secure` in prod → return to the browser. For multipart: stream the body without re-parsing.
@@ -91,12 +91,12 @@ The full schema below is **the entire MVP schema** (later phases add no new tabl
 
 ```prisma
 // apps/api/prisma/schema.prisma (essentials)
+// Prisma 7 (Phase 0 outcome): NO url/directUrl inside the schema. The CLI
+// reads DATABASE_DIRECT_URL from prisma.config.ts; the app runtime connects
+// through @prisma/adapter-pg with DATABASE_URL (see 0_Phase.md §1 trap 5).
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DATABASE_DIRECT_URL")
-  extensions = [postgis, pgcrypto]
+  provider = "postgresql"
 }
 
 generator client {
@@ -150,8 +150,6 @@ model users {
   reportsResolved   reports[]          @relation("resolver")
   views             propertyViews[]
   auditLogs         auditLogs[]
-  payments          payments[]
-  subscriptions     subscriptions[]
   region            locations? @relation(fields: [regionId], references: [id])
   regionId          String?    @db.Uuid
 
@@ -443,33 +441,9 @@ model auditLogs {
   @@index([action, createdAt])
 }
 
-// Phase 2 tables — present in schema for planning but no module code until later
-model payments {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  subscriptionId  String?  @db.Uuid
-  amount          Decimal  @db.Decimal(14,2)
-  currency        Currency
-  provider        String   @db.VarChar(30)
-  transactionId   String   @unique
-  status          String   @db.VarChar(20)
-  createdAt       DateTime @default(now()) @db.Timestamptz(6)
-  user            users    @relation(fields: [userId], references: [id])
-  @@index([userId, createdAt])
-}
-
-model subscriptions {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  plan        String   @db.VarChar(20)
-  status      String   @db.VarChar(20)
-  provider    String   @db.VarChar(30)
-  startAt     DateTime @db.Timestamptz(6)
-  endAt       DateTime @db.Timestamptz(6)
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  user        users    @relation(fields: [userId], references: [id])
-  @@index([userId, status, endAt])
-}
+// Phase 2 product tables (payments, subscriptions) are intentionally NOT part
+// of the MVP schema — see 0_Phase.md "Out of MVP scope". They are created by a
+// Phase 2 migration when the premium/payments work starts.
 ```
 
 **Spec deviations, explicit (§35 vs this phase)**:
@@ -534,3 +508,24 @@ E2E (Playwright): register → land on `/auth/verify-phone` → enter dev OTP �
 - **OTP SMS in prod** → `AUTH_OTP_DEV_MODE=true` only in dev; production startup assert logs a warning if `SMS_PROVIDER=console`. Real provider is pre-launch.
 - **Citext extension** for `users.email` lowercasing — added to the init migration alongside PostGIS.
 - **N+1 in `/users/me` `?expand=stats`** (not in this phase) — deferred to Phase 6.
+
+---
+
+## 6. Phase 1 outcomes (implemented 2026-09-06)
+
+**Status: COMPLETE — all DoD gates green.** Deviations and verified facts:
+
+1. **Ports**: local db moved to **5434** (5432/5433 taken by other projects on this machine) — compose, `.env.example`, `env.ts` defaults, `prisma.config.ts` all consistent. Prisma 7 CLI does not load `.env` — `prisma.config.ts` does `import 'dotenv/config'`.
+2. **Migrations**: `20260906112211_auth_core` — 17 tables + enums; starts with `SET search_path = public, extensions;` (the migration connection does not inherit the URL search_path); appends raw-SQL GiST index on `location` + partial unique `(tenantId, propertyId) WHERE status='PENDING'` on `"rentalRequests"` (Prisma names tables camelCase — raw SQL must match). Verified: PostGIS in `extensions` schema, both custom indexes present.
+3. **Seed**: 14 regions + 64 districts (78 locations), USD→UZS rate for today, admin user from `ADMIN_PHONE`/`ADMIN_INITIAL_PASSWORD` (Argon2id). Idempotent upserts.
+4. **Auth module** (`apps/api/src/modules/auth/`): register / login (+ Redis fail-counter lockout: 10 fails/15 min → 429) / refresh (rotation + **reuse detection → family revoke**, verified) / logout / verify-phone (5-attempt, 5-min TTL, hashed codes → `isPhoneVerified` + `canListProperties`) / phone/resend / forgot-password (no enumeration) / reset-password (revokes ALL tokens, then issues one fresh session token). `SmsSender` interface + console driver; dev OTP returned only when `AUTH_OTP_DEV_MODE && !production`.
+5. **RBAC stack**: `ThrottleGuard` (Redis, `@Throttle` decorator, `DISABLE_THROTTLE=true` for tests) → `JwtAuthGuard` (Bearer or `rentuz_at` cookie, `@Public()` bypass) → `SuspendedGuard` (403 on mutations) → `RoleGuard` (`@Roles`). **Decorator order rule**: `@Controller()` before `@Public()` (trap 6).
+6. **Users module**: `GET/PATCH /users/me` only — avatar moved to Phase 2 (user decision).
+7. **Env**: production assertions throw on dev secrets (`<32 chars`), `AUTH_OTP_DEV_MODE=true`, `AUTO_APPROVE_LISTINGS=true`; warns on `SMS_PROVIDER=console`. Covered by unit tests.
+8. **Web**: BFF proxy `app/api/v1/[...path]/route.ts` (cookie pass-through, `Domain=` stripped from Set-Cookie, multipart-safe body forward); `lib/api.ts` (typed fetch, `ApiError`); `lib/session.ts` (`getSession`/`requireSession`); 5 auth pages (RHF 7.87 + Zod resolvers 5.9.1): login, register, verify-phone (60 s resend cooldown), forgot, reset; `(tenant)/layout.tsx` with verification banner; favorites placeholder; `@/*` path alias; uz.json auth/verification/favorites keys.
+9. **Tests**: 13 api unit + 7 contracts unit + **11 integration** (supertest vs live PostGIS/Redis; truncation between cases; mirrors `main.ts` setup — cookieParser + validation pipe + prefix, trap 13). Full curl smoke of register→verify→login→refresh-rotate→reuse-revoke→users/me(401/200/passwordHash-absent) also verified manually.
+10. **OpenAPI**: `/docs` serves Swagger with 5 auth DTO schemas registered via **native `z.toJSONSchema()`** (trap 1 resolution) — `zod-openapi` was removed (v6 API incompatible: no `extendsZodWithOpenApi`, registry required).
+11. **E2E (Playwright)**: deferred — CI Lighthouse/E2E wiring lands with Phase 3 per plan; integration suite covers the Phase 1 DoD.
+12. **nestjs-pino**: still deferred (Nest `Logger` in use) — Phase 8 monitoring item.
+
+**Verification (AGENTS.md order)**: lint ✓ · typecheck ✓ · unit 20/20 ✓ · integration 11/11 ✓ · build ✓ (web pre-renders 12 routes; api `dist/` via `scripts/build.mjs`) · boot `/health` 200, `/ready` 200 (db+redis ok).

@@ -5,7 +5,7 @@
 - Read `RentUZ-specs.md` before changing product behavior or architecture.
 - Read `context/0_Phase.md` first for locked decisions, versions, layout, environment variables, Docker, CI, and cross-cutting conventions; then read the phase file that owns the task (`context/1_Phase.md` through `context/8_Phase.md`).
 - Treat `context/0_Phase.md` as the cross-cutting source of truth. When a phase file conflicts with it, reconcile the docs before implementing.
-- This repository is currently specification-first: the planned `apps/`, `packages/`, root manifests, Docker files, CI workflow, and `.env.example` files are not present yet. Do not report planned commands as runnable until those files exist.
+- The scaffold now exists (Phase 0 complete, `feature/phase-0-foundation` branch): `apps/`, `packages/`, root manifests, Docker files, CI workflow, and `.env.example` files are all present. Treat `context/0_Phase.md` §1 ("Phase 0 outcomes") as the record of what is actually runnable today — most notably: the API runs via `tsx` (not a compiled `dist/`), Prisma migrations need the docker-compose stack, and `pnpm lint/typecheck/test/build` are the verified commands.
 
 ## Locked technical constraints
 

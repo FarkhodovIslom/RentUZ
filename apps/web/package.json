@@ -11,12 +11,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "5.9.1",
     "@rentuz/contracts": "workspace:*",
     "@rentuz/ui": "workspace:*",
     "next": "16.3.4",
     "next-intl": "4.14.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-hook-form": "7.87.0",
     "zod": "4.5.4"
   },
   "devDependencies": {

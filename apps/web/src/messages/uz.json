@@ -3,7 +3,8 @@
     "comingSoonTitle": "Tez orada",
     "comingSoonDescription": "Bu bo'lim keyingi fazalarda ishga tushadi.",
     "backHome": "Bosh sahifaga qaytish",
-    "loading": "Yuklanmoqda..."
+    "loading": "Yuklanmoqda...",
+    "submitting": "Yuborilmoqda..."
   },
   "nav": {
     "home": "Bosh sahifa",
@@ -47,5 +48,75 @@
   "notFound": {
     "title": "Sahifa topilmadi",
     "description": "Siz izlagan sahifa mavjud emas yoki o'chirilgan bo'lishi mumkin."
+  },
+  "auth": {
+    "login": {
+      "title": "Hisobingizga kirish",
+      "phone": "Telefon raqam",
+      "password": "Parol",
+      "cta": "Kirish",
+      "noAccount": "Hisobingiz yo'qmi?",
+      "register": "Ro'yxatdan o'tish",
+      "forgot": "Parolni unutdingizmi?",
+      "invalid": "Telefon raqam yoki parol xato",
+      "locked": "Hisob vaqtincha bloklangan. Bir ozdan keyin urinib ko'ring"
+    },
+    "register": {
+      "title": "Ro'yxatdan o'tish",
+      "name": "Ismingiz",
+      "phone": "Telefon raqam",
+      "password": "Parol (kamida 12 belgi)",
+      "email": "Email (ixtiyoriy)",
+      "cta": "Ro'yxatdan o'tish",
+      "haveAccount": "Hisobingiz bormi?",
+      "login": "Kirish",
+      "taken": "Bu telefon raqam allaqachon ro'yxatdan o'tgan"
+    },
+    "verify": {
+      "title": "Telefonni tasdiqlash",
+      "subtitle": "Raqamga yuborilgan 5 xonali kodni kiriting",
+      "placeholder": "5 xonali kod",
+      "cta": "Tasdiqlash",
+      "resend": "Qayta yuborish",
+      "resendIn": "{seconds} soniyadan keyin qayta yuborish",
+      "invalid": "Kod xato yoki muddati tugagan",
+      "success": "Telefon tasdiqlandi!"
+    },
+    "forgot": {
+      "title": "Parolni tiklash",
+      "subtitle": "Telefon raqamingizni kiriting — tiklash kodi yuboriladi",
+      "cta": "Kod yuborish",
+      "sent": "Agar raqam ro'yxatda bo'lsa, kod yuborildi"
+    },
+    "reset": {
+      "title": "Yangi parol",
+      "code": "Tiklash kodi",
+      "newPassword": "Yangi parol (kamida 12 belgi)",
+      "cta": "Parolni o'zgartirish"
+    },
+    "errors": {
+      "network": "Tarmoq xatosi. Qayta urinib ko'ring",
+      "unknown": "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring"
+    }
+  },
+  "errors": {
+    "unauthorized": "Avval tizimga kiring",
+    "forbidden": "Sizda bu amal uchun ruxsat yo'q",
+    "rateLimited": "Juda ko'p urinish. Bir oz kutib turing",
+    "validation": "Ma'lumotlarda xatolik bor"
+  },
+  "verification": {
+    "banner": {
+      "title": "Telefon raqamingizni tasdiqlang",
+      "description": "E'lon berish uchun telefon tasdiqlanishi kerak",
+      "cta": "Tasdiqlash"
+    }
+  },
+  "favorites": {
+    "empty": {
+      "title": "Hozircha saqlangan e'lonlar yo'q",
+      "description": "Yurakcha belgisini bosib yoqmagan e'lonlaringizni shu yerda saqlashingiz mumkin",
+      "cta": "E'lonlarni ko'rish"
+    }
   }
 }

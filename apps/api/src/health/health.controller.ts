@@ -1,7 +1,8 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { PrismaService } from '../prisma/prisma.service.js';
-import type { RedisService } from '../redis/redis.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
+import { Public } from '../common/decorators/public.decorator.js';
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -14,6 +15,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 @ApiTags('health')
 @Controller()
+@Public()
 export class HealthController {
   constructor(
     private readonly prisma: PrismaService,

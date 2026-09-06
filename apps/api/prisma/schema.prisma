@@ -1,6 +1,9 @@
-// RentUZ Phase 0 schema: datasource + generator only (models land in Phase 1).
-// The first migration creates the `extensions` schema + PostGIS so the Prisma
-// shadow database receives them as well (context/0_Phase.md §2, Geo decision).
+// RentUZ MVP schema — context/1_Phase.md §2.
+// Prisma 7 (Phase 0 outcome): no url/directUrl here. The CLI reads
+// DATABASE_DIRECT_URL from prisma.config.ts; the app runtime connects via
+// @prisma/adapter-pg with DATABASE_URL (see 0_Phase.md §1 trap 5).
+//
+// payments/subscriptions are Phase 2 product tables and are NOT in this schema.
 
 datasource db {
   provider = "postgresql"
@@ -12,4 +15,437 @@ generator client {
   runtime             = "nodejs"
   moduleFormat        = "esm"
   importFileExtension = "js"
+}
+
+// ─── enums ───
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum Currency {
+  UZS
+  USD
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  ROOM
+  COMMERCIAL
+  OFFICE
+  LAND
+  OTHER
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  ACTIVE
+  PAUSED
+  RENTED
+  REJECTED
+  DELETED
+}
+
+enum FurnishedLevel {
+  NONE
+  PARTIAL
+  FULL
+}
+
+enum RentalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  COMPLETED
+}
+
+enum NotifType {
+  REQUEST_NEW
+  REQUEST_ACCEPTED
+  REQUEST_REJECTED
+  NEW_MESSAGE
+  PROPERTY_VERIFIED
+  PROPERTY_REJECTED
+  PRICE_CHANGED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  REJECTED
+}
+
+enum ReportTarget {
+  USER
+  PROPERTY
+  MESSAGE
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum OtpPurpose {
+  REGISTRATION
+  LOGIN
+  RESET
+}
+
+// ─── identity & auth ───
+
+model users {
+  id                String     @id @default(uuid()) @db.Uuid
+  name              String     @db.VarChar(80)
+  email             String?    @unique @db.Citext
+  phone             String     @unique @db.VarChar(20)
+  passwordHash      String     @db.VarChar(255)
+  avatar            String?    @db.Text
+  role              UserRole   @default(USER)
+  status            UserStatus @default(ACTIVE)
+  isPhoneVerified   Boolean    @default(false)
+  canListProperties Boolean    @default(false)
+  lastSeenAt        DateTime?  @db.Timestamptz(6)
+  createdAt         DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime   @updatedAt @db.Timestamptz(6)
+
+  properties             properties[]              @relation("user_properties")
+  refreshTokens          refreshTokens[]
+  phoneVerifications     phoneVerifications[]
+  favorites              favorites[]
+  rentalRequestsAsTenant rentalRequests[]          @relation("rr_tenant")
+  rentalRequestsAsOwner  rentalRequests[]          @relation("rr_owner")
+  conversationsAsTenant  conversations[]           @relation("conv_tenant")
+  conversationsAsOwner   conversations[]           @relation("conv_owner")
+  conversationParticipants conversationParticipants[]
+  messages               messages[]
+  notifications          notifications[]
+  reportsFiled           reports[]                 @relation("reporter")
+  reportsResolved        reports[]                 @relation("resolver")
+  views                  propertyViews[]
+  auditLogs              auditLogs[]
+  region                 locations?                @relation(fields: [regionId], references: [id])
+  regionId               String?                   @db.Uuid
+
+  @@index([role, status, createdAt])
+}
+
+model refreshTokens {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @db.VarChar(128)
+  family    String    @db.Uuid
+  userAgent String?    @db.Text
+  ip        String?    @db.Inet
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+
+  @@unique([userId, tokenHash])
+  @@index([family])
+  @@index([userId, revokedAt])
+}
+
+model phoneVerifications {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String?    @db.Uuid
+  user       users?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone      String     @db.VarChar(20)
+  purpose    OtpPurpose
+  codeHash   String     @db.VarChar(128)
+  attempts  Int        @default(0)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime   @db.Timestamptz(6)
+  consumedAt DateTime?  @db.Timestamptz(6)
+
+  @@index([phone, purpose, createdAt])
+}
+
+// ─── reference data ───
+
+model locations {
+  id       String      @id @default(uuid()) @db.Uuid
+  parentId String?     @db.Uuid
+  parent   locations?  @relation("loc_parent", fields: [parentId], references: [id])
+  children locations[] @relation("loc_parent")
+  kind     String      @db.VarChar(16)
+  name     String      @db.VarChar(120)
+  slug     String      @unique @db.VarChar(140)
+
+  properties properties[]
+  users      users[]
+
+  @@index([parentId])
+}
+
+model fxRates {
+  id        String   @id @default(uuid()) @db.Uuid
+  base      Currency
+  quote     Currency
+  rate      Decimal  @db.Decimal(20, 8)
+  asOf      DateTime @db.Date
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  source    String   @db.VarChar(40)
+
+  @@unique([base, quote, asOf])
+  @@index([quote, asOf])
+}
+
+// ─── properties ───
+
+model properties {
+  id              String         @id @default(uuid()) @db.Uuid
+  ownerId         String         @db.Uuid
+  owner           users          @relation("user_properties", fields: [ownerId], references: [id])
+  title           String         @db.VarChar(160)
+  slug            String         @unique @db.VarChar(200)
+  description     String         @db.Text
+  type            PropertyType
+  price           Decimal        @db.Decimal(14, 2)
+  currency        Currency       @default(UZS)
+  priceUzs        BigInt
+  period          String         @default("month") @db.VarChar(16)
+  rooms           Int
+  bedrooms        Int
+  bathrooms       Int
+  area            Decimal        @db.Decimal(8, 2)
+  floor           Int?
+  totalFloors     Int?
+  renovation      String?        @db.VarChar(40)
+  furnished       FurnishedLevel @default(NONE)
+  petsAllowed     Boolean        @default(false)
+  smokingAllowed  Boolean        @default(false)
+  address         String         @db.VarChar(255)
+  location        Unsupported("geography(Point, 4326)")?
+  lat             Float?
+  lng             Float?
+  regionId        String?        @db.Uuid
+  districtId      String?        @db.Uuid
+  region          locations?     @relation(fields: [regionId], references: [id])
+  amenities       Json           @db.JsonB
+  status          PropertyStatus @default(DRAFT)
+  isVerified      Boolean        @default(false)
+  verifiedAt      DateTime?      @db.Timestamptz(6)
+  verifiedBy      String?        @db.Uuid
+  rejectionReason String?        @db.Text
+  submittedAt     DateTime?      @db.Timestamptz(6)
+  views           Int            @default(0)
+  mainImageUrl    String?        @db.Text
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
+
+  images     propertyImages[]
+  favorites  favorites[]
+  rentalRequests rentalRequests[]
+  conversations  conversations[]
+  viewsLog   propertyViews[]
+  dailyStats propertyDailyStats[]
+
+  @@index([status, type, priceUzs, createdAt])
+  @@index([ownerId, status])
+  @@index([regionId, districtId])
+  // GiST index on `location` + partial unique on rental_requests are created
+  // as raw SQL in the auth_core migration (0_Phase.md §1 trap 3).
+}
+
+model propertyImages {
+  id         String    @id @default(uuid()) @db.Uuid
+  propertyId String    @db.Uuid
+  property   properties @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url        String    @db.Text
+  thumbUrl   String?   @db.Text
+  width      Int
+  height     Int
+  ordering   Int       @default(0)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([propertyId, ordering])
+}
+
+model favorites {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  propertyId String     @db.Uuid
+  user       users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   properties @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@unique([userId, propertyId])
+  @@index([userId, createdAt])
+}
+
+// ─── rental requests ───
+
+model rentalRequests {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @db.Uuid
+  ownerId         String       @db.Uuid
+  propertyId      String       @db.Uuid
+  message         String       @db.Text
+  startDate       DateTime     @db.Date
+  durationMonths  Int
+  priceSnapshot   Decimal      @db.Decimal(14, 2)
+  currency        Currency
+  priceUzsSnapshot BigInt
+  status          RentalStatus @default(PENDING)
+  decidedAt       DateTime?    @db.Timestamptz(6)
+  decidedBy       String?      @db.Uuid
+  decisionNote    String?      @db.Text
+  createdAt       DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt      @db.Timestamptz(6)
+
+  tenant   users      @relation("rr_tenant", fields: [tenantId], references: [id])
+  owner    users      @relation("rr_owner", fields: [ownerId], references: [id])
+  property properties @relation(fields: [propertyId], references: [id])
+
+  @@index([tenantId, status, createdAt])
+  @@index([ownerId, status, createdAt])
+  @@index([propertyId, status])
+}
+
+// ─── chat ───
+
+model conversations {
+  id                String    @id @default(uuid()) @db.Uuid
+  propertyId        String?   @db.Uuid
+  tenantId          String    @db.Uuid
+  ownerId           String    @db.Uuid
+  lastMessageAt     DateTime? @db.Timestamptz(6)
+  lastMessagePreview String?  @db.VarChar(200)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt        @db.Timestamptz(6)
+
+  property     properties?               @relation(fields: [propertyId], references: [id])
+  tenant       users                     @relation("conv_tenant", fields: [tenantId], references: [id])
+  owner        users                     @relation("conv_owner", fields: [ownerId], references: [id])
+  participants conversationParticipants[]
+  messages     messages[]
+
+  @@unique([propertyId, tenantId, ownerId])
+  @@index([tenantId, lastMessageAt])
+  @@index([ownerId, lastMessageAt])
+}
+
+model conversationParticipants {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @db.Uuid
+  userId         String    @db.Uuid
+  lastReadAt     DateTime? @db.Timestamptz(6)
+  joinedAt       DateTime  @default(now()) @db.Timestamptz(6)
+
+  conversation conversations @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user          users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model messages {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @db.Uuid
+  senderId       String   @db.Uuid
+  text           String   @db.Text
+  attachments    Json     @db.JsonB
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  conversation conversations @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       users        @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+// ─── notifications / moderation / analytics ───
+
+model notifications {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  type      NotifType
+  titleKey  String    @db.VarChar(80)
+  bodyKey   String    @db.VarChar(80)
+  data      Json      @db.JsonB
+  readAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model reports {
+  id             String        @id @default(uuid()) @db.Uuid
+  reporterId     String        @db.Uuid
+  targetType     ReportTarget
+  targetId       String        @db.Uuid
+  reason         String        @db.VarChar(60)
+  description     String?       @db.Text
+  priority       ReportPriority @default(MEDIUM)
+  status         ReportStatus  @default(OPEN)
+  evidence       Json          @db.JsonB
+  resolvedBy     String?       @db.Uuid
+  resolvedAt     DateTime?      @db.Timestamptz(6)
+  resolutionNote String?       @db.Text
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6)
+
+  reporter users  @relation("reporter", fields: [reporterId], references: [id])
+  resolver users? @relation("resolver", fields: [resolvedBy], references: [id])
+
+  @@index([status, priority, createdAt])
+  @@index([targetType, targetId])
+}
+
+model propertyViews {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @db.Uuid
+  userId     String?  @db.Uuid
+  sessionId  String   @db.VarChar(64)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  property properties @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user     users?     @relation(fields: [userId], references: [id])
+
+  @@index([propertyId, createdAt])
+  @@index([propertyId, sessionId, createdAt])
+}
+
+model propertyDailyStats {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @db.Uuid
+  day        DateTime @db.Date
+  views      Int      @default(0)
+  favorites  Int      @default(0)
+  messages   Int      @default(0)
+  requests   Int      @default(0)
+
+  property properties @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, day])
+}
+
+model auditLogs {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String   @db.Uuid
+  action     String   @db.VarChar(60)
+  targetType String   @db.VarChar(30)
+  targetId   String   @db.Uuid
+  metadata   Json     @db.JsonB
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  admin users @relation(fields: [adminId], references: [id])
+
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
 }

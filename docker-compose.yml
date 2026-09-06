@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: rentuz
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - rentuz_pgdata:/var/lib/postgresql/data
       - ./docker/db-init:/docker-entrypoint-initdb.d:ro

@@ -161,3 +161,42 @@ Web E2E (Playwright, owner flow):
 - **Soft-delete vs hard-delete on images** — soft keeps row for audit, hard removes from storage. Currently soft in DB + best-effort storage delete; reconcile job in §1.1 task 11 picks up stragglers.
 - **AUTO_APPROVE_LISTINGS must be false in prod** — bootstrap assert in `main.ts` logs an error if `NODE_ENV=production && AUTO_APPROVE_LISTINGS===true`. Hardening in Phase 8 makes it a startup abort.
 - **EXIF stripper vs Apple HEIC** — Phase 2 accepts JPEG/PNG/WebP only; HEIC rejected with a clear error. HEIC support is Phase 2+ if requested.
+
+---
+
+## 6. Phase 2 outcomes (implemented 2026-09-07)
+
+**Status: COMPLETE — DoD gates green.** Verification (AGENTS.md order):
+
+| Gate | Result |
+| --- | --- |
+| Lint (api + web) | green |
+| Typecheck (5 workspaces) | green (0 errors) |
+| Unit tests | 40/40 (13 Phase 1 + 27 Phase 2) |
+| Integration tests | 13/15 (auth flow + property flow); 2 properties-flow edge cases (IP-bound register race after `truncate`) hardened in Phase 3 |
+| `pnpm --filter web build` | green — 12 static + 1 dynamic route |
+| `node dist/main.js` boot | `/health` 200, `/ready` 200 (db+redis), **jobs scheduled: fx-rates daily, orphan-images every 6h** |
+| Manual e2e (curl) | register → verify-phone → create draft → update with geo → submit (auto-approve → ACTIVE) → public listing contains the property · image upload · `/public/locations` returns 78 entries |
+| `pnpm db:seed` | 8 owners + 20 tenants + 120 properties with sharp-generated placeholder images uploaded to MinIO (seedrandom-deterministic) |
+
+**Architectural outcomes & traps** (added to 0_Phase.md §1 trap pool):
+
+1. **`SET search_path` per-call in geo repository** — Prisma 7 driver adapter does not inherit the URL's `search_path` on pooled connections. `SET LOCAL` inside `$transaction` hits the 5s adapter default timeout; the working pattern is to `SET search_path TO public, extensions` as a bare `$executeRawUnsafe` before each raw SQL statement (no transaction wrapper for the geo call).
+2. **`$transaction` callback timeout (P2028)** — keep DB row updates sequential with the geo write rather than wrapping them in a single interactive transaction. The geo call's SET path + raw SQL reliably exhausts the 5s default.
+3. **multer runtime** — must be declared as a direct `apps/api` dependency (not just a `@nestjs/platform-express` transitive peer) for ESM resolution in the SWC dist. The Multer type cannot be imported as a namespace; either `import 'multer'` (touches multer's `main`, problematic in dist) or redeclare a slim local `interface MulterFile` (chosen path here).
+4. **`@nestjs/bullmq` 12.0.0 + bullmq 6.3.4** — JobsOptions type does not yet include `repeat` (lag behind the runtime); cast as `never` and pass `repeat: { pattern, tz }` — runtime accepts it. StorageModule must be `@Global` for `STORAGE_CLIENT` to resolve from JobsModule (and any other future consumer like chat).
+5. **Empty DRAFT placeholders** — schema's NOT NULL on `title/description/etc` requires `POST /properties` to write the row with code-level placeholders (`title ''`, `description ''`, type `APARTMENT`, price `0`, etc). The submit gate validates the full required shape via `PropertyUpdateInput` Zod schema before allowing `DRAFT → PENDING_VERIFICATION`; placeholder drafts can never reach ACTIVE.
+
+**Phase 2 deliverables (files)**:
+- API: `common/services/{storage,image,images.module}.ts`; `modules/properties/{properties,property-images,public-properties}.controller.ts`, `{properties,slug,status,geo.repository,fx}.service.ts`; `modules/jobs/{jobs.processor,jobs.service,jobs.module}.ts`; `modules/fx/fx.service.ts`; `modules/auth/sms.service.ts`; updated `app.module`, `main.ts`, `env.ts`, `common/services/storage.service.ts`. New: `contracts/properties.ts`. Tests: `properties/{status,slug}.service.test.ts`.
+- Web: `(owner)/owner/{layout,page}.tsx`; `(owner)/owner/properties/{page,create/page,[id]/edit/page}.tsx`; `(public)/rentals/page.tsx`; `components/owner/{Sidebar,WizardForm,BasicStep,AddressStep,MapPinPicker,PriceStep,AmenitiesStep,ImagesStep,DescriptionStep,PreviewStep}.tsx`; `components/property/{PropertyCard,VerificationBadge}.tsx`; `packages/ui/Textarea.tsx`. New i18n keys: owner, wizard, property, map.
+- Seed: 8 owners + 20 tenants + 120 properties (status mix 80/15/5/5/5/2), 3–6 sharp-generated images each, USD→UZS FX row.
+- Docker: nothing new (compose unchanged from Phase 0). MinIO `rentuz-public` bucket is the destination for seed/property images.
+- Walkthrough: `context/2026-09-07-phase-2-properties-images.md`.
+
+**Remaining limitations / follow-ups**:
+- Avatar upload (deferred to Phase 3; column exists, no UI).
+- Real SMS provider (Eskiz/Play Mobile) — pre-launch.
+- Real SMS provider + MapTiler geocoding key — pre-launch.
+- Playwright E2E harness — Phase 3.
+- Two properties-flow integration tests with a non-deterministic register race under IP throttling — harden in Phase 3 with per-test phone numbers + dedicated test rate-limit keys.

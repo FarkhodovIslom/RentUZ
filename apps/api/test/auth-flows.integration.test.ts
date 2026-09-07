@@ -122,7 +122,7 @@ describe('POST /api/v1/auth/verify-phone', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/auth/verify-phone')
-      .send({ phone, code: '00000', purpose: 'REGISTRATION' })
+      .send({ phone, code: '99999', purpose: 'REGISTRATION' })
       .expect(401);
 
     const otp = await prisma.phoneVerifications.findFirst({ where: { phone }, orderBy: { createdAt: 'desc' } });

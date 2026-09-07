@@ -4,3 +4,4 @@ export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from '.
 export { EmptyState, type EmptyStateProps } from './components/EmptyState';
 export { Input, type InputProps } from './components/Input';
 export { Skeleton } from './components/Skeleton';
+export { Textarea, type TextareaProps } from './components/Textarea';

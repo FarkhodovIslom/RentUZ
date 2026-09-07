@@ -118,5 +118,104 @@
       "description": "Yurakcha belgisini bosib yoqmagan e'lonlaringizni shu yerda saqlashingiz mumkin",
       "cta": "E'lonlarni ko'rish"
     }
+  },
+  "owner": {
+    "nav": {
+      "dashboard": "Boshqaruv paneli",
+      "properties": "E'lonlarim",
+      "newProperty": "E'lon berish",
+      "requests": "Ijara so'rovlari",
+      "messages": "Xabarlar",
+      "analytics": "Analitika",
+      "profile": "Profil",
+      "soon": "Tez kunda"
+    },
+    "dashboard": {
+      "title": "Boshqaruv paneli",
+      "kpi": {
+        "views": "Ko'rishlar",
+        "favorites": "Sevimlilar",
+        "messages": "Xabarlar",
+        "requests": "So'rovlar",
+        "conversion": "Konversiya"
+      },
+      "recentProperties": "So'nggi e'lonlarim",
+      "noProperties": "Hali e'lon yo'q. Birinchi e'loningizni yarating!",
+      "create": "E'lon berish"
+    },
+    "properties": {
+      "title": "E'lonlarim",
+      "new": "Yangi e'lon",
+      "filterAll": "Barchasi",
+      "empty": "Hali e'lon yo'q",
+      "emptyCta": "Birinchi e'loningizni yarating",
+      "status": {
+        "DRAFT": "Qoralama",
+        "PENDING_VERIFICATION": "Tekshiruvda",
+        "ACTIVE": "Faol",
+        "PAUSED": "Pauza",
+        "RENTED": "Ijaraga berilgan",
+        "REJECTED": "Rad etilgan",
+        "DELETED": "O'chirilgan"
+      },
+      "actions": {
+        "edit": "Tahrirlash",
+        "pause": "Pauza",
+        "resume": "Davom ettirish",
+        "view": "Ko'rish"
+      },
+      "confirmDelete": "O'chirishni xohlaysizmi?"
+    },
+    "wizard": {
+      "title": "Yangi e'lon",
+      "steps": {
+        "basic": "Asosiy ma'lumotlar",
+        "address": "Manzil",
+        "price": "Narx",
+        "amenities": "Qulayliklar",
+        "images": "Rasmlar",
+        "description": "Tavsif",
+        "preview": "Ko'rib chiqish"
+      },
+      "next": "Keyingi",
+      "back": "Orqaga",
+      "saveDraft": "Qoralama saqlash",
+      "submit": "Yuborish",
+      "saved": "Saqlandi",
+      "submitted": "Yuborildi! Tekshiruvdan keyin faollashadi.",
+      "validation": "Ma'lumotlarni to'ldiring",
+      "field": {
+        "title": "Sarlavha",
+        "description": "Tavsif",
+        "type": "Turi",
+        "price": "Narx",
+        "rooms": "Xonalar",
+        "area": "Maydon",
+        "address": "Manzil",
+        "lng": "Uzunlik",
+        "lat": "Kenglik"
+      },
+      "amenities": {
+        "wifi": "Wi-Fi",
+        "parking": "Avtoturargoh",
+        "furniture": "Mebel",
+        "ac": "Konditsioner",
+        "tv": "Televizor",
+        "fridge": "Muzlatgich",
+        "washer": "Kir yuvish mashina",
+        "elevator": "Lift",
+        "security": "Qo'riqchi"
+      }
+    }
+  },
+  "map": {
+    "placeholder": "Xaritada pin tanlang",
+    "locating": "Joylashuv aniqlanmoqda..."
+  },
+  "property": {
+    "verified": "Tasdiqlangan",
+    "noImage": "Rasm yo'q",
+    "rooms": "xona",
+    "viewMore": "Batafsil"
   }
 }

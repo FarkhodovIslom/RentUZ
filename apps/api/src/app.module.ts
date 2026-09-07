@@ -14,6 +14,8 @@ import { RedisModule } from './redis/redis.module.js';
 import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { PropertiesModule } from './modules/properties/properties.module.js';
+import { JobsModule } from './modules/jobs/jobs.module.js';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { UsersModule } from './modules/users/users.module.js';
     HealthModule,
     AuthModule,
     UsersModule,
+    PropertiesModule,
+    JobsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

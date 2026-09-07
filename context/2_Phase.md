@@ -115,8 +115,9 @@ An owner can create a property via the 7-step wizard (saved as draft after step 
 ---
 
 ## 2. Database changes (this phase)
-- **No new tables**. Two index additions run as a new migration: `CREATE INDEX properties_status_created_idx ON properties (status, createdAt DESC);` and `CREATE INDEX propertyImages_property_ordering_idx ON "property_images" ("propertyId", "ordering");`.
-- The init migration from Phase 1 already created the GiST index on `location` and the partial unique index on `rental_requests`.
+- **No new migration needed** (updated 2026-09-06): the two indexes this section originally called for — `properties (status, type, priceUzs, createdAt)` and `propertyImages (propertyId, ordering)` — were **already created by the Phase 1 `auth_core` migration** via the schema-level `@@index` declarations. The GiST index on `location` and the partial unique on `rentalRequests` are also in place from Phase 1.
+- **Empty-DRAFT implementation note**: the Phase 1 schema keeps `title/description/type/price/rooms/bedrooms/bathrooms/area/address` NOT NULL, so `POST /properties` creates the DRAFT with **code-level placeholders** (`title ''`, `description ''`, type `APARTMENT`, price `0`, currency UZS, counts `0`, area `0`, address `''`, amenities `[]`). The **submit gate** (`POST /:id/submit`) validates the complete required shape via `PropertyUpdateInput` Zod schema before allowing `DRAFT → PENDING_VERIFICATION` — drafts with placeholders can never reach ACTIVE. Placeholders are invisible publicly (only ACTIVE properties are public).
+- Pin updates: `@vis.gl/react-maplibre@8.1.3` (with `maplibre-gl@6.7.0`), `@aws-sdk/client-s3` exact pin recorded at install, `@nestjs/bullmq@12.0.0` + `bullmq@6.3.4` (wrapper peers verified for Nest 12; fallback to direct `Queue`/`Worker` documented).
 
 ---
 

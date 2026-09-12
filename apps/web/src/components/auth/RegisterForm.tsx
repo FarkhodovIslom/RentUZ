@@ -76,7 +76,7 @@ export function RegisterForm() {
       ) : null}
 
       <Button type="submit" className="w-full" loading={isSubmitting}>
-        {tCommon('submitting')}
+        {isSubmitting ? tCommon('submitting') : t('cta')}
       </Button>
 
       <p className="text-sm text-fg-secondary">

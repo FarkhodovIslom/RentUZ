@@ -3,7 +3,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { LoginInput, type LoginInputT } from '@rentuz/contracts';
 import { Button, Input } from '@rentuz/ui';
@@ -14,6 +15,8 @@ export function LoginForm() {
   const tErrors = useTranslations('auth.errors');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -28,7 +31,12 @@ export function LoginForm() {
     setFormError(null);
     try {
       await api.post('/auth/login', values);
-      router.push('/');
+      // Drop the anonymous favorites probes (null) so the next mount
+      // refetches with the real session (pending-favorite replay depends on it).
+      queryClient.removeQueries({ queryKey: ['favorites'] });
+      // Return to the page that required auth (pending favorite, etc.).
+      const next = searchParams.get('next');
+      router.push(next && next.startsWith('/') ? next : '/');
       router.refresh();
     } catch (error) {
       if (error instanceof ApiError) {
@@ -67,7 +75,7 @@ export function LoginForm() {
       ) : null}
 
       <Button type="submit" className="w-full" loading={isSubmitting}>
-        {tCommon('submitting')}
+        {isSubmitting ? tCommon('submitting') : t('cta')}
       </Button>
 
       <div className="flex flex-col gap-1 text-sm text-fg-secondary">

@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/session';
+import { Navbar } from '../../components/nav/Navbar';
+import { BottomNav } from '../../components/nav/BottomNav';
 
 /**
  * Tenant shell — requires a session (0_Phase.md §2 BFF session rules).
@@ -14,7 +16,8 @@ export default async function TenantLayout({ children }: { children: ReactNode }
   const t = await getTranslations('verification.banner');
 
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh flex-col">
+      <Navbar />
       {!session.isPhoneVerified ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/30 bg-primary/10 px-4 py-3">
           <div>
@@ -29,7 +32,8 @@ export default async function TenantLayout({ children }: { children: ReactNode }
           </a>
         </div>
       ) : null}
-      {children}
+      <main className="flex-1 pb-24 md:pb-0">{children}</main>
+      <BottomNav />
     </div>
   );
 }

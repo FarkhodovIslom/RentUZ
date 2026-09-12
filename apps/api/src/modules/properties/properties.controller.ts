@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PropertyUpdateInput, type PropertyUpdateInputT, type PropertyDetailDTOT } from '@rentuz/contracts';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator.js';
@@ -39,16 +39,19 @@ export class PropertiesController {
   }
 
   @Post(':id/submit')
+  @HttpCode(200)
   submit(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.properties.submit(id, user.id);
   }
 
   @Post(':id/pause')
+  @HttpCode(200)
   pause(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.properties.pause(id, user.id);
   }
 
   @Post(':id/resume')
+  @HttpCode(200)
   resume(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.properties.resume(id, user.id);
   }

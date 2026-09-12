@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { QueryProvider } from '@/components/providers/QueryProvider';
+import { Toaster } from '@/components/ui/Toaster';
 import './globals.css';
 
 const inter = Inter({
@@ -26,7 +28,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="uz" className={inter.variable}>
       <body className="min-h-dvh bg-bg font-sans text-fg antialiased">
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

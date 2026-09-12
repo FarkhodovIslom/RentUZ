@@ -258,8 +258,10 @@ model properties {
   @@index([status, type, priceUzs, createdAt])
   @@index([ownerId, status])
   @@index([regionId, districtId])
+  @@index([priceUzs])
   // GiST index on `location` + partial unique on rental_requests are created
-  // as raw SQL in the auth_core migration (0_Phase.md §1 trap 3).
+  // as raw SQL in the auth_core migration (0_Phase.md §1 trap 3); the partial
+  // verified/ACTIVE index is raw SQL in the phase 3 migration (same trap).
 }
 
 model propertyImages {

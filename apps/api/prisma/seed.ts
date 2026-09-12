@@ -31,7 +31,7 @@ const PUBLIC_BASE = process.env.PUBLIC_STORAGE_BASE_URL ?? 'http://localhost:900
 
 const rng = seedrandom('rentuz-mvp-2026');
 
-async function placeholderImage(seed: number, label: string): Promise<Buffer> {
+async function placeholderImage(seed: number, _label: string): Promise<Buffer> {
   const hue = (seed * 47) % 360;
   const bg = `hsl(${hue}, 50%, 22%)`;
   const fg = `hsl(${(hue + 30) % 360}, 70%, 70%)`;
@@ -43,7 +43,7 @@ async function placeholderImage(seed: number, label: string): Promise<Buffer> {
     .toBuffer();
 }
 
-async function uploadToMinio(key: string, body: Buffer, contentType: string): Promise<string> {
+async function uploadToMinio(key: string, body: Buffer, _contentType: string): Promise<string> {
   await s3.send(new PutObjectCommand({ Bucket: PUBLIC_BUCKET, Key: key, Body: body, ContentType }));
   return `${PUBLIC_BASE}/${key}`;
 }

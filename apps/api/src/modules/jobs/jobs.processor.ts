@@ -44,11 +44,13 @@ export class FxRatesProcessor extends WorkerHost implements OnModuleInit {
 
     // Recompute `priceUzs` for USD listings. In a single SQL — safe because
     // USD listings are few (we only allow USD with manual override; CBU is
-    // the official rate).
+    // the official rate). NOTE: USD only — UZS listings already carry their
+    // final priceUzs (Phase 3 fix: this filter previously read 'UZS' and
+    // multiplied local prices by the FX rate on every run).
     const updated = await this.prisma.$executeRaw`
       UPDATE "properties"
       SET "priceUzs" = (FLOOR(price * ${rate}::numeric))::bigint
-      WHERE "currency" = 'UZS' AND status IN ('ACTIVE','PENDING_VERIFICATION','DRAFT','PAUSED','RENTED','REJECTED')
+      WHERE "currency" = 'USD' AND status IN ('ACTIVE','PENDING_VERIFICATION','DRAFT','PAUSED','RENTED','REJECTED')
     `;
 
     this.logger.log(`fx-rate updated: ${rate} UZS/USD, ${updated} rows recomputed`);

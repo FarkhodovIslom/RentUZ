@@ -1,5 +1,38 @@
 # RentUZ MVP — Phase 4: Rental Requests, My Rentals, Lifecycle Jobs
 
+> **Status (2026-09-11): COMPLETE.** All §1 tasks implemented; verification gate green
+> (lint, typecheck, unit 53, integration 57, build, E2E 8/8, boot + curl smoke incl.
+> the concurrent-accept race). Deviations from the original plan recorded in
+> `walkthroughs/phase-4-rental-requests.md` and summarized below:
+>
+> 1. **EventBus instead of @nestjs/event-emitter** (§1.1 item 5) — thin
+>    `common/services/event-bus.service.ts` (Node EventEmitter, @Global module),
+>    consistent with the Phase 3 decision to keep the package uninstalled.
+> 2. **No migration** (§2) — `RentalStatus.EXPIRED` already existed from Phase 1;
+>    the `ALTER TYPE` was never needed. The partial unique index was also already
+>    in place.
+> 3. **Flat jobs layout** (§1.2 paths) — `complete-rentals.processor.ts` /
+>    `expire-pending-requests.processor.ts` in `modules/jobs/`, matching the
+>    existing flat `jobs.processor.ts` style; no `processors/` subfolder, no
+>    QueueScheduler (stable-`jobId` repeatables, as before).
+> 4. **`pricing.service.ts` consolidated** into `rental-requests.service.ts`
+>    (the snapshot is one `FxService.toUzs` call); only `rental-lifecycle.service.ts`
+>    (`materializeEndDate`/`isActive`, date-fns UTC) is separate.
+> 5. **`/jobs` admin endpoint** reads BullMQ `getJobs` + `getJobSchedulers`
+>    directly — no run-log table (DoD satisfied with zero schema additions).
+> 6. **NotifType mapping**: CANCELLED/COMPLETED/EXPIRED events enqueue under the
+>    closest existing enum member with distinct `bodyKey`s + `data.status` —
+>    the Phase 1 `NotifType` enum has no members for them; Phase 6 may extend.
+> 7. **`startDate` wire format**: `z.string()` (date-only `YYYY-MM-DD` or ISO
+>    datetime), converted to `Date` in the service — `z.coerce.date()` cannot be
+>    expressed in JSON Schema and crashes @nestjs/swagger's converter at boot.
+> 8. **Error-code passthrough fix**: `GlobalExceptionFilter` now surfaces
+>    `new HttpException({ code })` payloads as `error.code` (previously squashed
+>    to the generic status-based code — `DUPLICATE_PENDING_REQUEST` etc. never
+>    reached clients, including pre-existing Phase 2/3 endpoints).
+> 9. Web owner page path is `/owner/requests` (the sidebar's existing link),
+>    API routes stay `GET /owner/rental-requests` per §44.
+>
 > Cross-cutting decisions live in `0_Phase.md`. Property/owner rules are in `2_Phase.md`. Search and details are in `3_Phase.md`. This phase introduces the request flow that converts discovery into a binding rental agreement, plus the background jobs that move requests through their lifecycle.
 
 ## Goal

@@ -18,12 +18,25 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<Request & { user?: AuthUser }>();
     const header = request.headers.authorization;
     const bearer = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
     const token = bearer ?? (request.cookies?.['rentuz_at'] as string | undefined);
+
+    if (isPublic) {
+      // Best-effort identity on public routes (view tracking, §1.3): a valid
+      // token enriches the request; absent or expired stays anonymous.
+      if (token) {
+        try {
+          const payload = this.tokens.verifyAccessToken(token);
+          request.user = { id: payload.sub, role: payload.role, status: payload.status };
+        } catch {
+          // Anonymous.
+        }
+      }
+      return true;
+    }
 
     if (!token) throw new UnauthorizedException();
     let payload: { sub: string; role: string; status: string };

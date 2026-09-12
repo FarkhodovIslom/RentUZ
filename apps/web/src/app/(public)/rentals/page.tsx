@@ -1,56 +1,87 @@
 import { getTranslations } from 'next-intl/server';
-import { api } from '@/lib/api';
+import type { Metadata } from 'next';
+import type { PropertyCardDTOT } from '@rentuz/contracts';
+import { serverApiGet, ServerApiError } from '@/lib/server-api';
 import { PropertyCard } from '@/components/property/PropertyCard';
+import { EmptyState } from '@rentuz/ui';
+import { FilterDrawer } from '@/components/search/FilterDrawer';
+import { SortDropdown } from '@/components/search/SortDropdown';
+import { Pagination } from '@/components/search/Pagination';
+import { buildSearchQuery, firstParam, type SearchParamsRecord } from '@/components/search/filter-utils';
 
-type Card = {
-  id: string;
-  slug: string;
-  title: string;
-  price: number;
-  priceUzs: number;
-  currency: string;
-  type: string;
-  rooms: number;
-  area: number;
-  address: string;
-  mainImageUrl: string | null;
-  regionName: string | null;
-  isVerified: boolean;
-  createdAt: string;
+export const metadata: Metadata = {
+  title: 'Ijara e’lonlari',
+  description: "O'zbekiston bo'ylab ijara uylarni narx, hudud va sharoit bo'yicha filtrlang.",
 };
 
-export default async function RentalsPage() {
-  const t = await getTranslations('home');
+interface PaginatedCards {
+  data: PropertyCardDTOT[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
 
-  let cards: Card[] = [];
-  let total = 0;
+export default async function RentalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsRecord>;
+}) {
+  const params = await searchParams;
+  const t = await getTranslations('rentals');
+  const query = buildSearchQuery(params, { limit: 24 });
+
+  let cards: PropertyCardDTOT[] = [];
+  let meta = { page: 1, limit: 24, total: 0, totalPages: 1 };
   try {
-    const data = await api.get<{ data: Card[]; meta: { total: number } }>('/public/properties?limit=24');
-    cards = data.data;
-    total = data.meta.total;
-  } catch {
-    cards = [];
-    total = 0;
+    const payload = await serverApiGet<PaginatedCards>(`/search/properties${query}`);
+    cards = payload.data;
+    meta = payload.meta;
+  } catch (error) {
+    if (!(error instanceof ServerApiError) || error.status !== 400) {
+      throw error;
+    }
+    // Bad filter values in the URL — fall back to the plain listing.
+    const payload = await serverApiGet<PaginatedCards>('/search/properties?limit=24');
+    cards = payload.data;
+    meta = payload.meta;
+  }
+
+  const paginationParams: Record<string, string | undefined> = {};
+  for (const key of ['city', 'district', 'type', 'minPrice', 'maxPrice', 'rooms', 'bedrooms', 'bathrooms', 'minArea', 'maxArea', 'minFloor', 'furnished', 'pets', 'smoking', 'verified', 'sort']) {
+    const value = firstParam(params, key);
+    if (value) paginationParams[key] = value;
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">{t('hero.title')}</h1>
-        <p className="text-sm text-fg-muted">{total} ta e'lon</p>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-fg-muted">{meta.total} ta e&apos;lon</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <FilterDrawer />
+          <SortDropdown />
+        </div>
       </header>
 
       {cards.length === 0 ? (
-        <p className="rounded-[12px] border border-dashed border-border bg-card p-10 text-center text-fg-muted">
-          Hozircha e'lon yo'q
-        </p>
+        <EmptyState
+          title={t('empty.title')}
+          description={t('empty.description')}
+          action={
+            <a href="/rentals" className="text-sm font-medium text-primary hover:text-primary-hover">
+              {t('empty.cta')}
+            </a>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((c) => (
-            <PropertyCard key={c.id} property={c} />
+          {cards.map((card) => (
+            <PropertyCard key={card.id} property={card} />
           ))}
         </div>
       )}
+
+      <Pagination page={meta.page} totalPages={meta.totalPages} basePath="/rentals" params={paginationParams} />
     </div>
   );
 }

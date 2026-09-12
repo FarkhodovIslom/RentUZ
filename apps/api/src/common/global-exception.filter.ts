@@ -41,7 +41,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
-    const code = STATUS_TO_CODE[status] ?? 'INTERNAL_ERROR';
+    // Domain exceptions carry their contract code (e.g. DUPLICATE_PENDING_REQUEST)
+    // in getResponse().error.code — prefer it over the status-based default.
+    const domainCode =
+      exception instanceof HttpException ? this.extractCode(exception) : undefined;
+    const code = domainCode ?? STATUS_TO_CODE[status] ?? 'INTERNAL_ERROR';
     const message =
       exception instanceof HttpException ? this.extractMessage(exception) : 'Internal server error';
     const requestId = (request as { id?: string }).id;
@@ -68,5 +72,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return Array.isArray(m) ? m.join('; ') : String(m);
     }
     return exception.message;
+  }
+
+  /** Domain exceptions are built as `new XxxException({ code })` — the code sits flat on getResponse(). */
+  private extractCode(exception: HttpException): ErrorCode | undefined {
+    const res = exception.getResponse();
+    if (res && typeof res === 'object' && 'code' in res) {
+      const code = (res as { code?: unknown }).code;
+      if (typeof code === 'string') return code as ErrorCode;
+    }
+    return undefined;
   }
 }

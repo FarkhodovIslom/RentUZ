@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { FxService } from '../fx/fx.service.js';
+import { SearchCacheService } from '../search/search-cache.service.js';
 import { GeoRepository } from './geo.repository.js';
 import { SlugService } from './slug.service.js';
 import { PropertyStatusService } from './status.service.js';
@@ -14,7 +15,6 @@ import type {
 type PropertyWithRelations = propertiesModel & {
   images: propertyImagesModel[];
   region: locationsModel | null;
-  district: locationsModel | null;
 };
 
 const FULL_VALIDATION_KEYS = [
@@ -41,6 +41,7 @@ export class PropertiesService {
     private readonly slugs: SlugService,
     private readonly geo: GeoRepository,
     private readonly fx: FxService,
+    private readonly searchCache: SearchCacheService,
   ) {}
 
   async createDraft(ownerId: string): Promise<{ id: string }> {
@@ -88,7 +89,6 @@ export class PropertiesService {
       include: {
         images: { orderBy: { ordering: 'asc' } },
         region: true,
-        district: true,
       },
     });
     if (!prop || prop.status === 'DELETED') throw new NotFoundException();
@@ -163,7 +163,7 @@ export class PropertiesService {
     const nextStatus = autoApprove ? 'ACTIVE' : 'PENDING_VERIFICATION';
     if (autoApprove) this.status.assert(prop.status, 'ACTIVE');
 
-    return this.prisma.properties.update({
+    const result = await this.prisma.properties.update({
       where: { id: propertyId },
       data: {
         status: nextStatus,
@@ -172,6 +172,8 @@ export class PropertiesService {
       },
       select: { status: true },
     });
+    await this.searchCache.bumpVersion();
+    return result;
   }
 
   async pause(propertyId: string, ownerId: string): Promise<{ status: string }> {
@@ -193,6 +195,7 @@ export class PropertiesService {
       where: { id: propertyId },
       data: { status: 'DELETED' },
     });
+    await this.searchCache.bumpVersion();
   }
 
   private async simpleTransition(propertyId: string, ownerId: string, to: 'PAUSED' | 'ACTIVE') {
@@ -202,11 +205,13 @@ export class PropertiesService {
       throw new ForbiddenException({ code: 'INSUFFICIENT_PERMISSIONS' });
     }
     this.status.assert(prop.status, to);
-    return this.prisma.properties.update({
+    const result = await this.prisma.properties.update({
       where: { id: propertyId },
       data: { status: to },
       select: { status: true },
     });
+    await this.searchCache.bumpVersion();
+    return result;
   }
 
   private toDetail(prop: PropertyWithRelations): PropertyDetailDTOT {

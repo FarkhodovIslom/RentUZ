@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { Badge } from '@rentuz/ui';
+import { Badge, EmptyState } from '@rentuz/ui';
 import { api } from '@/lib/api';
 
 type OwnerListing = {

@@ -3,7 +3,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ImagesModule } from '../../common/services/images.module.js';
 import { FxRatesProcessor, OrphanImagesProcessor } from './jobs.processor.js';
+import { CompleteRentalsProcessor } from './complete-rentals.processor.js';
+import { ExpirePendingRequestsProcessor } from './expire-pending-requests.processor.js';
+import { JobsAdminController } from './jobs-admin.controller.js';
 import { JobsService } from './jobs.service.js';
+import { RentalRequestsModule } from '../rental-requests/rental-requests.module.js';
 
 @Module({
   imports: [
@@ -18,10 +22,17 @@ import { JobsService } from './jobs.service.js';
         port: Number(new URL(process.env.REDIS_URL ?? 'redis://localhost:6379').port) || 6379,
       },
     }),
-    BullModule.registerQueue({ name: 'fx-rates' }, { name: 'orphan-images' }),
+    BullModule.registerQueue(
+      { name: 'fx-rates' },
+      { name: 'orphan-images' },
+      { name: 'complete-rentals' },
+      { name: 'expire-pending-requests' },
+    ),
     ImagesModule, // provides S3 client to the orphan processor
+    RentalRequestsModule, // complete-rentals / expire-pending processors
   ],
-  providers: [FxRatesProcessor, OrphanImagesProcessor, JobsService],
+  controllers: [JobsAdminController],
+  providers: [FxRatesProcessor, OrphanImagesProcessor, CompleteRentalsProcessor, ExpirePendingRequestsProcessor, JobsService],
   exports: [JobsService],
 })
 export class JobsModule {}

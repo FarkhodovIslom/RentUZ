@@ -1,14 +1,11 @@
-import { getTranslations } from 'next-intl/server';
-import { EmptyState } from '@rentuz/ui';
+import type { Metadata } from 'next';
+import { MapExplorer } from '@/components/map/MapExplorer';
 
-export const metadata = { title: 'Xarita' };
+export const metadata: Metadata = {
+  title: 'Xarita',
+  description: "Xaritada ijara uylarni hudud bo'yicha ko'ring.",
+};
 
-export default async function MapPage() {
-  const t = await getTranslations('common');
-
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-16">
-      <EmptyState title={t('comingSoonTitle')} description={t('comingSoonDescription')} />
-    </div>
-  );
+export default function MapPage() {
+  return <MapExplorer />;
 }

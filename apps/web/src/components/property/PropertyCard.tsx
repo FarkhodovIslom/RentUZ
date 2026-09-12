@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { VerificationBadge } from './VerificationBadge';
 
 interface CardData {
@@ -48,6 +49,7 @@ export function PropertyCard({ property }: { property: CardData }) {
           <div className="flex h-full items-center justify-center text-fg-muted">Rasm yo'q</div>
         )}
         {property.isVerified ? <VerificationBadge className="absolute left-2 top-2" /> : null}
+        <FavoriteButton propertyId={property.id} variant="card" />
       </div>
       <div className="space-y-1 p-4">
         <h3 className="line-clamp-1 font-semibold">{property.title || '(sarlavha kiritilmagan)'}</h3>
@@ -56,7 +58,7 @@ export function PropertyCard({ property }: { property: CardData }) {
           {property.address}
         </p>
         <div className="flex items-center justify-between pt-2">
-          <p className="text-base font-bold text-primary">
+          <p data-testid="card-price" className="text-base font-bold text-primary">
             {priceFormatted} <span className="text-xs text-fg-muted">{property.currency}</span>
           </p>
           <p className="text-xs text-fg-muted">

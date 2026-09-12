@@ -12,7 +12,8 @@
     "map": "Xarita",
     "saved": "Saqlangan",
     "profile": "Profil",
-    "login": "Kirish"
+    "login": "Kirish",
+    "requests": "So'rovlar"
   },
   "home": {
     "badge": "O'zbekistonning zamonaviy ijara bozori",
@@ -44,6 +45,43 @@
       }
     },
     "footer": "© 2026 RentUZ. Barcha huquqlar himoyalangan."
+  },
+  "rentals": {
+    "title": "Ijara e'lonlari",
+    "empty": {
+      "title": "Hech narsa topilmadi",
+      "description": "Filtrlarni o'zgartirib ko'ring yoki barcha e'lonlarni ko'rish",
+      "cta": "Barcha e'lonlar"
+    },
+    "sort": {
+      "label": "Saralash",
+      "newest": "Eng yangi",
+      "price_asc": "Narxi arzon",
+      "price_desc": "Narxi qimmat",
+      "popular": "Ommabop"
+    },
+    "filters": {
+      "title": "Filtrlar",
+      "apply": "Qo'llash",
+      "reset": "Tozalash",
+      "any": "Barchasi",
+      "chooseCity": "Avval shaharni tanlang",
+      "city": "Shahar / viloyat",
+      "district": "Tuman",
+      "type": "Uy turi",
+      "price": "Narx (UZS)",
+      "from": "dan",
+      "to": "gacha",
+      "rooms": "Xonalar (kamida)",
+      "bedrooms": "Yotoqxona (kamida)",
+      "bathrooms": "Hammom (kamida)",
+      "area": "Maydon, m²",
+      "floor": "Qavat (kamida)",
+      "furnished": "Mebel",
+      "pets": "Hayvonlar ruxsat",
+      "smoking": "Chekish ruxsat",
+      "verified": "Faqat tasdiqlangan"
+    }
   },
   "notFound": {
     "title": "Sahifa topilmadi",
@@ -215,7 +253,101 @@
   "property": {
     "verified": "Tasdiqlangan",
     "noImage": "Rasm yo'q",
+    "noTitle": "(sarlavha kiritilmagan)",
     "rooms": "xona",
-    "viewMore": "Batafsil"
+    "viewMore": "Batafsil",
+    "views": "{count, plural, =0{ko'rilgan emas} one{# marta ko'rilgan} other{# marta ko'rilgan}}",
+    "similar": "O'xshash e'lonlar",
+    "savedToast": "Saqlandi"
+  },
+  "mapPage": {
+    "title": "Xaritada ijara uylar",
+    "zoomIn": "Juda ko'p belgi — yaqinlashtiring",
+    "truncatedHint": "Ko'rsatilgan: 500 tagacha",
+    "results": "{count} ta e'lon",
+    "selectPin": "Belgini tanlang",
+    "radius": "Radius: {km} km"
+  },
+  "homeSections": {
+    "newListings": "Yangi e'lonlar",
+    "featured": "Tanlangan e'lonlar",
+    "popularCities": "Ommabop shaharlar",
+    "viewAll": "Hammasini ko'rish",
+    "listings": "{count} ta e'lon",
+    "howItWorks": {
+      "title": "Qanday ishlaydi",
+      "step1": {
+        "title": "Qidiruv",
+        "description": "Filtrlar yordamida o'zingizga mos uyni toping"
+      },
+      "step2": {
+        "title": "Aloqa",
+        "description": "E'lon egasi bilan chat orqali bog'laning"
+      },
+      "step3": {
+        "title": "Ijara",
+        "description": "Ijara so'rovini yuboring va ko'chib kiring"
+      }
+    },
+    "trustSection": {
+      "title": "Xavfsiz va ishonchli",
+      "description": "Har bir e'lon moderatsiyadan o'tadi, telefon raqamlar tasdiqlanadi."
+    },
+    "ownerCta": {
+      "title": "Uyingizni ijaraga bering",
+      "description": "E'loningiz minglab ijara qidiruvchilariga yetib boradi",
+      "cta": "E'lon berish"
+    },
+    "premiumCta": {
+      "title": "Premium imkoniyatlar",
+      "description": "Tez orada: e'lonlarni yuqoriga ko'tarish. Hozircha barcha e'lonlar bepul.",
+      "cta": "Batafsil (tez orada)"
+    },
+    "mapDiscovery": {
+      "title": "Xaritada ko'ring",
+      "description": "So'nggi e'lonlar xaritada"
+    },
+    "faq": {
+      "title": "Ko'p so'raladigan savollar",
+      "items": {
+        "q1": {
+          "q": "RentUZ bepulmi?",
+          "a": "Ha, e'lon joylash va qidirish hozircha to'liq bepul."
+        },
+        "q2": {
+          "q": "E'lonlar tekshiriladimi?",
+          "a": "Ha, har bir e'lon moderatsiya orqali o'tadi."
+        },
+        "q3": {
+          "q": "Telefonim ko'rinadimi?",
+          "a": "Yo'q, aloqa chat orqali — raqamingiz maxfiy qoladi."
+        },
+        "q4": {
+          "q": "Qanday to'lov qilinadi?",
+          "a": "To'lov va shartnomalar to'g'ridan-to'g'ri egasi bilan kelishiladi."
+        },
+        "q5": {
+          "q": "Sevimlilarni qanday saqlayman?",
+          "a": "Yurakcha belgisini bosing — e'lon 'Saqlanganlar'ga qo'shiladi."
+        },
+        "q6": {
+          "q": "Xarita qanday ishlaydi?",
+          "a": "Hududni tanlang yoki xaritani suring — belgilar avtomatik yangilanadi."
+        },
+        "q7": {
+          "q": "E'lon necha kun davomida ko'rinadi?",
+          "a": "Faol e'lon moderatsiya holatiga qarab cheksiz ko'rinadi."
+        },
+        "q8": {
+          "q": "Noto'g'ri e'lonni qanday xabar qilaman?",
+          "a": "E'lon sahifasidagi 'Shikoyat' tugmasi orqali (tez orada)."
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Mos uyingiz sizni kutmoqda",
+      "description": "Bugun ro'yxatdan o'ting va minglab e'lonlarni ko'ring",
+      "cta": "Boshlash"
+    }
   }
 }

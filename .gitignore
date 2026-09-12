@@ -26,3 +26,4 @@ coverage/
 .idea/
 .vscode/
 .zcode/
+test-results/

@@ -9,12 +9,17 @@ import { SuspendedGuard } from './common/guards/suspended.guard.js';
 import { ThrottleGuard } from './common/guards/throttle.guard.js';
 import { validateEnv } from './config/env.js';
 import { TokenModule } from './common/token.module.js';
+import { EventBusModule } from './common/services/event-bus.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PropertiesModule } from './modules/properties/properties.module.js';
+import { SearchModule } from './modules/search/search.module.js';
+import { FavoritesModule } from './modules/favorites/favorites.module.js';
+import { RentalRequestsModule } from './modules/rental-requests/rental-requests.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { JobsModule } from './modules/jobs/jobs.module.js';
 
 @Module({
@@ -23,10 +28,15 @@ import { JobsModule } from './modules/jobs/jobs.module.js';
     PrismaModule,
     RedisModule,
     TokenModule,
+    EventBusModule,
     HealthModule,
     AuthModule,
     UsersModule,
     PropertiesModule,
+    SearchModule,
+    FavoritesModule,
+    RentalRequestsModule,
+    NotificationsModule,
     JobsModule,
   ],
   providers: [

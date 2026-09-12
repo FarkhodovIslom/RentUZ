@@ -71,7 +71,7 @@ export function ResetPasswordForm() {
       ) : null}
 
       <Button type="submit" className="w-full" loading={isSubmitting}>
-        {tCommon('submitting')}
+        {isSubmitting ? tCommon('submitting') : t('cta')}
       </Button>
     </form>
   );

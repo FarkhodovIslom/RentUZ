@@ -1,4 +1,6 @@
 import { getTranslations } from 'next-intl/server';
+import { FavoritesBadge } from '@/components/favorites/FavoritesBadge';
+import { RequestsBadge } from '@/components/rentals/RequestsBadge';
 
 export async function Navbar() {
   const t = await getTranslations('nav');
@@ -19,8 +21,13 @@ export async function Navbar() {
           <a href="/map" className="hover:text-fg">
             {t('map')}
           </a>
-          <a href="/favorites" className="hover:text-fg">
+          <a href="/favorites" className="inline-flex items-center hover:text-fg">
             {t('saved')}
+            <FavoritesBadge />
+          </a>
+          <a href="/rental-requests" className="inline-flex items-center hover:text-fg">
+            {t('requests')}
+            <RequestsBadge />
           </a>
         </nav>
         <a href="/login" className={loginClass}>

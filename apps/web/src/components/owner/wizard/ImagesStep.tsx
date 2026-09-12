@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import type { WizardProperty } from './WizardForm';
 
@@ -14,8 +14,9 @@ interface UploadedImage {
 }
 
 /**
- * Step 5 — image uploader. Sequential one-by-one uploads via fetch (no
- * XHR progress this minimal version, Phase 3+ can add); preview + delete wired.
+ * Step 5 — image uploader. Sequential one-by-one uploads via XHR so the
+ * progress bar and the abort button work (Phase 3 polish — plain fetch
+ * streams through the BFF without progress events).
  */
 export function ImagesStep({
   value,
@@ -23,39 +24,67 @@ export function ImagesStep({
 }: {
   value: WizardProperty;
   propertyId: string;
+  /** WizardForm passes its updater; uploads are server-owned, so it is unused. */
+  onChange?: (patch: Partial<WizardProperty>) => void;
 }) {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
-  const upload = async (file: File) => {
+  const abort = () => {
+    xhrRef.current?.abort();
+    xhrRef.current = null;
+  };
+
+  const upload = (file: File) => {
     if (images.length >= 15) {
       setError("Maksimum 15 ta rasm");
       return;
     }
     setBusy(true);
     setError(null);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      // We hit the BFF directly with FormData; api.post can't (JSON-only).
-      const res = await fetch(`/api/v1/properties/${propertyId}/images`, {
-        method: 'POST',
-        body: form,
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(data?.message ?? `Yuklash xatosi: ${res.status}`);
-      }
-      const created = (await res.json()) as UploadedImage;
-      setImages((imgs) => [...imgs, created]);
-    } catch (err) {
-      if (err instanceof Error) setError(err.message);
-      else setError('Yuklashda xatolik');
-    } finally {
+    setProgress(0);
+
+    const form = new FormData();
+    form.append('file', file);
+
+    // XHR (not fetch): onprogress + abort need it. The BFF path is the same.
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open('POST', `/api/v1/properties/${propertyId}/images`);
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      xhrRef.current = null;
       setBusy(false);
-    }
+      try {
+        const body = JSON.parse(xhr.responseText) as
+          | { success: true; data: UploadedImage }
+          | { success: false; message?: string };
+        if (xhr.status >= 200 && xhr.status < 300 && body.success) {
+          setImages((imgs) => [...imgs, body.data]);
+        } else {
+          setError(!body.success && body.message ? body.message : `Yuklash xatosi: ${xhr.status}`);
+        }
+      } catch {
+        setError(`Yuklash xatosi: ${xhr.status}`);
+      }
+    };
+    xhr.onerror = () => {
+      xhrRef.current = null;
+      setBusy(false);
+      setError('Tarmoq xatosi');
+    };
+    xhr.onabort = () => {
+      xhrRef.current = null;
+      setBusy(false);
+      setProgress(0);
+    };
+    xhr.send(form);
   };
 
   const remove = async (id: string) => {
@@ -78,6 +107,27 @@ export function ImagesStep({
         <p className="rounded-[12px] border border-error/40 bg-error/10 p-3 text-sm text-error">{error}</p>
       ) : null}
 
+      {busy ? (
+        <div className="space-y-1">
+          <div
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Yuklanmoqda"
+            className="h-2 overflow-hidden rounded-full bg-elevated"
+          >
+            <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="flex items-center justify-between text-xs text-fg-muted">
+            <span>{progress}%</span>
+            <button type="button" onClick={abort} className="text-error hover:underline">
+              Bekor qilish
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         <label className="flex aspect-square cursor-pointer items-center justify-center rounded-[12px] border-2 border-dashed border-border bg-card text-sm text-fg-muted hover:border-primary hover:text-fg">
           <input
@@ -87,15 +137,14 @@ export function ImagesStep({
             disabled={busy || images.length >= 15}
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) void upload(f);
+              if (f) upload(f);
             }}
           />
-          {busy ? '...' : '+ qo‘shish'}
+          {busy ? '…' : '+ qo‘shish'}
         </label>
 
         {images.map((img) => (
           <div key={img.id} className="group relative aspect-square overflow-hidden rounded-[12px] border border-border bg-elevated">
-            {}
             <img src={img.thumbUrl ?? img.url} alt="" className="h-full w-full object-cover" />
             <button
               type="button"

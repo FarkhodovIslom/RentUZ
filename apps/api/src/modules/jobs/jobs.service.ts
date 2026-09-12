@@ -15,6 +15,8 @@ export class JobsService implements OnModuleInit {
     @InjectQueue('orphan-images') private readonly orphanQueue: Queue,
     @InjectQueue('complete-rentals') private readonly completeRentalsQueue: Queue,
     @InjectQueue('expire-pending-requests') private readonly expirePendingQueue: Queue,
+    @InjectQueue('daily-stats') private readonly dailyStatsQueue: Queue,
+    @InjectQueue('notifications-cleanup') private readonly notificationsCleanupQueue: Queue,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -29,8 +31,8 @@ export class JobsService implements OnModuleInit {
     // BullMQ 6.3.4's JobsOptions type doesn't expose `repeat` yet (the runtime
     // accepts it; the type lags behind the docs). Cast to satisfy the compiler
     // and to keep the schedule declarative.
-    const repeatableOpts = (pattern: string) => ({
-      repeat: { pattern, tz: 'UTC' },
+    const repeatableOpts = (pattern: string, tz = 'UTC') => ({
+      repeat: { pattern, tz },
       removeOnComplete: 10,
       removeOnFail: 30,
     });
@@ -39,7 +41,10 @@ export class JobsService implements OnModuleInit {
       this.orphanQueue.add('tick', {}, { ...repeatableOpts('0 */6 * * *'), jobId: 'orphan-images-tick' } as never),
       this.completeRentalsQueue.add('tick', {}, { ...repeatableOpts('0 * * * *'), jobId: 'complete-rentals-hourly' } as never),
       this.expirePendingQueue.add('tick', {}, { ...repeatableOpts('0 */6 * * *'), jobId: 'expire-pending-6h' } as never),
+      // §1.2.6/§1.2.7 — Tashkent-local schedules (BullMQ repeat.tz).
+      this.dailyStatsQueue.add('rollup', {}, { ...repeatableOpts('0 2 * * *', 'Asia/Tashkent'), jobId: 'daily-stats-2am' } as never),
+      this.notificationsCleanupQueue.add('sweep', {}, { ...repeatableOpts('0 3 * * *', 'Asia/Tashkent'), jobId: 'notifications-cleanup-3am' } as never),
     ]);
-    this.logger.log('jobs scheduled: fx-rates daily, orphan-images every 6h, complete-rentals hourly, expire-pending every 6h');
+    this.logger.log('jobs scheduled: fx-rates daily, orphan-images every 6h, complete-rentals hourly, expire-pending every 6h, daily-stats 02:00 TAK, notifications-cleanup 03:00 TAK');
   }
 }

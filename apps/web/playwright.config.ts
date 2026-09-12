@@ -26,6 +26,9 @@ export default defineConfig({
       timeout: 60_000,
       reuseExistingServer: !process.env.CI,
       env: {
+        // E2E is self-contained on :4000 even when this worktree's dev API
+        // runs on :4100 (parallel phase development).
+        PORT: '4000',
         // Background jobs must not race the specs' users/properties, and the
         // register-per-spec flow would eventually trip the 5/h IP throttle on
         // repeat local runs (Redis persists between runs).
@@ -41,6 +44,10 @@ export default defineConfig({
       port: 3000,
       timeout: 60_000,
       reuseExistingServer: !process.env.CI,
+      env: {
+        INTERNAL_API_URL: 'http://localhost:4000',
+        NEXT_PUBLIC_SOCKET_URL: 'http://localhost:4000',
+      },
     },
   ],
 });

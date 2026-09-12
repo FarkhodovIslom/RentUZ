@@ -1,5 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { EventBusService } from '../../common/services/event-bus.service.js';
+import { FeatureFlagsService } from '../../common/services/feature-flags.service.js';
 import { FxService } from '../fx/fx.service.js';
 import { SearchCacheService } from '../search/search-cache.service.js';
 import { GeoRepository } from './geo.repository.js';
@@ -42,6 +44,8 @@ export class PropertiesService {
     private readonly geo: GeoRepository,
     private readonly fx: FxService,
     private readonly searchCache: SearchCacheService,
+    private readonly events: EventBusService,
+    private readonly flags: FeatureFlagsService,
   ) {}
 
   async createDraft(ownerId: string): Promise<{ id: string }> {
@@ -181,7 +185,9 @@ export class PropertiesService {
     }
     this.status.assert(prop.status, 'PENDING_VERIFICATION');
 
-    const autoApprove = process.env.AUTO_APPROVE_LISTINGS === 'true';
+    // AUTO_APPROVE_LISTINGS reads the runtime flag (§5 restart-free overrides;
+    // production is hard-false in FeatureFlagsService).
+    const autoApprove = (await this.flags.get('AUTO_APPROVE_LISTINGS')) === true;
     const nextStatus = autoApprove ? 'ACTIVE' : 'PENDING_VERIFICATION';
     if (autoApprove) this.status.assert(prop.status, 'ACTIVE');
 
@@ -195,7 +201,52 @@ export class PropertiesService {
       select: { status: true },
     });
     await this.searchCache.bumpVersion();
+    if (autoApprove) {
+      // §30: owner learns their listing passed verification. Phase 7's admin
+      // moderation flow will emit the same event (idempotency key dedupes).
+      this.events.emit('property.verified', { propertyId, ownerId });
+    }
     return result;
+  }
+
+  /**
+   * §34/§84 price-change trigger: only published listings have a public price
+   * worth alerting favoriting users about (DRAFT edits go through updateDraft).
+   * Emits property.price_changed → NotificationListeners fans out.
+   */
+  async changePrice(
+    propertyId: string,
+    ownerId: string,
+    input: { price: number; currency: 'UZS' | 'USD' },
+  ): Promise<{ id: string; priceUzs: number; oldPriceUzs: number }> {
+    const prop = await this.prisma.properties.findUnique({ where: { id: propertyId } });
+    if (!prop || prop.status === 'DELETED') throw new NotFoundException();
+    if (prop.ownerId !== ownerId) {
+      throw new ForbiddenException({ code: 'INSUFFICIENT_PERMISSIONS' });
+    }
+    if (!['ACTIVE', 'PAUSED', 'RENTED'].includes(prop.status)) {
+      throw new ConflictException({
+        code: 'CONFLICT',
+        message: 'Narx faqat e\'lon qilingan (ACTIVE/PAUSED/RENTED) uchun o\'zgartiriladi',
+      });
+    }
+    const oldPriceUzs = Number(prop.priceUzs);
+    const newPriceUzs = Number(await this.fx.toUzs(input.price, input.currency));
+    await this.prisma.properties.update({
+      where: { id: propertyId },
+      data: { price: String(input.price), currency: input.currency, priceUzs: BigInt(newPriceUzs) },
+    });
+    await this.searchCache.bumpVersion();
+    if (newPriceUzs !== oldPriceUzs) {
+      this.events.emit('property.price_changed', {
+        propertyId,
+        ownerId,
+        title: prop.title,
+        oldPriceUzs,
+        newPriceUzs,
+      });
+    }
+    return { id: propertyId, priceUzs: newPriceUzs, oldPriceUzs };
   }
 
   async pause(propertyId: string, ownerId: string): Promise<{ status: string }> {
@@ -229,7 +280,9 @@ export class PropertiesService {
     this.status.assert(prop.status, to);
     const result = await this.prisma.properties.update({
       where: { id: propertyId },
-      data: { status: to },
+      // Owner pause/resume writes pausedReason='OWNER' (Phase 7 §5: admin
+      // activation must only restore OWNER_SUSPENDED-paused rows).
+      data: { status: to, pausedReason: to === 'PAUSED' ? 'OWNER' : null },
       select: { status: true },
     });
     await this.searchCache.bumpVersion();

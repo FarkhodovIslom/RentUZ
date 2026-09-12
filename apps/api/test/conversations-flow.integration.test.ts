@@ -20,7 +20,10 @@ const DB_URL =
 
 const WEB_ORIGIN = 'http://localhost:3000';
 
-process.env.PRESENCE_GRACE_MS ??= '2000'; // snappy offline assertions
+// The gateway reads PRESENCE_GRACE_MS at module load — force a snappy value
+// (Phase 6's vitest config seeds the env from apps/api/.env where the dev
+// default 10000 lives, so `??=` would never take effect).
+process.env.PRESENCE_GRACE_MS = '2000';
 
 let app: INestApplication;
 let httpPort = 0;

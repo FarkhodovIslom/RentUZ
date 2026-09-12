@@ -5,6 +5,8 @@ import { ImagesModule } from '../../common/services/images.module.js';
 import { FxRatesProcessor, OrphanImagesProcessor } from './jobs.processor.js';
 import { CompleteRentalsProcessor } from './complete-rentals.processor.js';
 import { ExpirePendingRequestsProcessor } from './expire-pending-requests.processor.js';
+import { DailyStatsProcessor } from './daily-stats.processor.js';
+import { NotificationsCleanupProcessor } from './notifications-cleanup.processor.js';
 import { JobsAdminController } from './jobs-admin.controller.js';
 import { JobsService } from './jobs.service.js';
 import { RentalRequestsModule } from '../rental-requests/rental-requests.module.js';
@@ -27,12 +29,14 @@ import { RentalRequestsModule } from '../rental-requests/rental-requests.module.
       { name: 'orphan-images' },
       { name: 'complete-rentals' },
       { name: 'expire-pending-requests' },
+      { name: 'daily-stats' },
+      { name: 'notifications-cleanup' },
     ),
     ImagesModule, // provides S3 client to the orphan processor
     RentalRequestsModule, // complete-rentals / expire-pending processors
   ],
   controllers: [JobsAdminController],
-  providers: [FxRatesProcessor, OrphanImagesProcessor, CompleteRentalsProcessor, ExpirePendingRequestsProcessor, JobsService],
+  providers: [FxRatesProcessor, OrphanImagesProcessor, CompleteRentalsProcessor, ExpirePendingRequestsProcessor, DailyStatsProcessor, NotificationsCleanupProcessor, JobsService],
   exports: [JobsService],
 })
 export class JobsModule {}

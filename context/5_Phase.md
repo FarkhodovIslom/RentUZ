@@ -1,10 +1,13 @@
 # RentUZ MVP — Phase 5: Chat, Realtime, Attachments
 
-> **Status (2026-09-12): COMPLETE.** All §1 tasks implemented; verification gate green
+> **Status (2026-09-11, re-verified on the Phase 6/7 merge 2026-09-13): COMPLETE.**
+> All §1 tasks implemented; verification gate green
 > (lint, typecheck, unit 104 [contracts 39 + api 65], integration 76 incl. the
 > 2-instance Redis-adapter suite, build, E2E 9/9 incl. chat-flow, boot gate
-> `/health` + `/ready` + socket.io handshake smoke). Deviations from the
-> original plan recorded in `walkthroughs/phase-5-chat.md` and summarized below:
+> `/health` + `/ready` + socket.io handshake smoke; after merging Phase 6/7:
+> unit 190, integration 103/103, E2E 15/15). Deviations from the original plan
+> recorded in `walkthroughs/phase-5-chat.md` (incl. the EventBus API unification
+> with Phase 6) and summarized below:
 >
 > 1. **Attachment key layout** (§1.1.4) — `chat/{conversationId}/{attachmentId}/800.webp`
 >    (single 800w WebP variant). The doc's `chat/{conversationId}/{messageId}/`

@@ -110,6 +110,41 @@ against the codebase before implementation.
 | `pnpm --filter web test:e2e` | ✓ 9/9 (8 prior + chat-flow) |
 | Boot gate | ✓ `/health`, `/ready` (db+redis ok), socket.io handshake on :4000 |
 
+## Merge with Phase 6/7 (2026-09-13)
+
+Phase 6 (notifications/analytics) and Phase 7 (admin/moderation) landed on
+`main` in parallel worktrees while Phase 5 was in review. Resolved conflicts:
+
+- **EventBus**: adopted Phase 6's generic `on()/emit()` keyed off
+  `BusEventPayloads`; Phase 5's `conversation.created` + `message.created`
+  events joined the map. `MessageCreatedPayload` now carries BOTH the flat
+  ids Phase 6's notification listener needs (`messageId`, `propertyId` —
+  used for the idempotency key + enriched body) and the full `message` row
+  the gateway fans out as `message:new`. Phase 5's own NEW_MESSAGE enqueue
+  in `notifications.service` was dropped — Phase 6's
+  `notification-listeners.ts` covers it (idempotent, actor name, property
+  title).
+- **Guards**: Phase 7 added a global `AdminGuard` — safe on WS (early-returns
+  unless `@Roles('ADMIN')` is present); my four non-HTTP early-returns survive.
+- **`AuditLogInterceptor`** (global): passes handlers without `@Audit`
+  metadata untouched — gateway handlers unaffected.
+- **Owner sidebar**: `/chat` (Phase 5) + un-`soon`ed analytics (Phase 6) kept.
+- **Local env fix** (not code): `apps/api/.env` had `ADMIN_INITIAL_PASSWORD=`
+  (empty string defeats the seed/spec `??` fallback → login 400 in Phase 7
+  E2E) and lacked `ADMIN2_PHONE`. Set both + re-seeded.
+- **Phase 5 test robustness** (post-merge): Phase 6 moved the integration env
+  onto `apps/api/.env` (dotenv) — my `PRESENCE_GRACE_MS ??= '2000'` no longer
+  overrode the 10000 default; changed to a forced assignment. Also fixed a
+  latent timezone bug in Phase 6's rollup spec (UTC-only day anchoring dropped
+  the oldest day when run 00:00–05:00 Tashkent; re-anchored to the Tashkent
+  calendar) and the two-instance adapter teardown order (server close before
+  pub/sub disconnect).
+
+Full re-verification on the merged tree: lint ✓, typecheck ✓, unit 190 ✓
+(contracts 76 + api 114), integration **103/103** ✓ (8 suites incl. Phase 6
+notifications/analytics + Phase 7 admin), build ✓, reseed ✓, E2E **15/15** ✓
+(12 specs incl. chat-flow + admin-moderation), boot gate ✓.
+
 ## Remaining limitations / debts
 
 - **Emit is not durable** (5_Phase §5): a missed `message:new` is covered by

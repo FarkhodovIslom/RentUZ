@@ -32,3 +32,17 @@ export async function requireSession(): Promise<UserDTOT> {
   // redirect() throws, so past this line the session is non-null.
   return session as UserDTOT;
 }
+
+/**
+ * Admin gating (§49). No session → /login; a signed-in non-admin (or a
+ * suspended admin — UserDTO carries status) → /forbidden. The API enforces
+ * the same rule server-side (AdminGuard); this is the shell-level redirect.
+ */
+export async function requireRole(role: UserDTOT['role']): Promise<UserDTOT> {
+  const session = await requireSession();
+  if (session.role !== role || session.status !== 'ACTIVE') {
+    const { redirect } = await import('next/navigation');
+    redirect('/forbidden');
+  }
+  return session;
+}

@@ -18,7 +18,7 @@ const DB_URL =
   'postgresql://postgres:postgres@localhost:5434/rentuz?schema=public&search_path=public,extensions';
 
 process.env.RENTUZ_REALTIME_SCALE = '2';
-process.env.PRESENCE_GRACE_MS ??= '2000';
+process.env.PRESENCE_GRACE_MS = '2000';
 process.env.DISABLE_JOBS = 'true';
 process.env.DISABLE_THROTTLE = 'true';
 

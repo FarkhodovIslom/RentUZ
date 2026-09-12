@@ -137,3 +137,17 @@ export const LocationDTO = z.object({
   parentId: z.string().uuid().nullable(),
 });
 export type LocationDTOT = z.infer<typeof LocationDTO>;
+
+/** §34/§84 owner price change on a published listing → PRICE_CHANGED fan-out. */
+export const PropertyPriceChangeInput = z.object({
+  price: z.coerce.number().positive().max(1e12),
+  currency: z.enum(['UZS', 'USD']).default('UZS'),
+});
+export type PropertyPriceChangeInputT = z.infer<typeof PropertyPriceChangeInput>;
+
+export const PropertyPriceChangeResult = z.object({
+  id: z.string().uuid(),
+  oldPriceUzs: z.number(),
+  priceUzs: z.number(),
+});
+export type PropertyPriceChangeResultT = z.infer<typeof PropertyPriceChangeResult>;

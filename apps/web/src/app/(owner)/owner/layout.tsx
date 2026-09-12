@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { getSession } from '@/lib/session';
 import { Sidebar } from '@/components/owner/Sidebar';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 /**
  * Owner shell (§31): sidebar with dashboard, listings, requests (Phase 4),
@@ -23,14 +24,19 @@ export default async function OwnerLayout({ children }: { children: ReactNode })
     { href: '/owner/properties/create', label: t('newProperty') },
     { href: '/owner/requests', label: t('requests') },
     { href: '/chat', label: t('messages') },
-    { href: '/owner/analytics', label: t('analytics'), soon: true },
+    { href: '/owner/analytics', label: t('analytics') },
     { href: '/profile', label: t('profile') },
   ];
 
   return (
     <div className="flex min-h-dvh">
       <Sidebar items={items} userName={session.name} />
-      <main className="flex-1 p-6 md:p-8">{children}</main>
+      <main className="flex-1 p-6 md:p-8">
+        <div className="mb-2 flex justify-end">
+          <NotificationBell />
+        </div>
+        {children}
+      </main>
     </div>
   );
 }

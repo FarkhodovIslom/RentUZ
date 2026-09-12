@@ -41,12 +41,17 @@ export class RedisIoAdapter extends IoAdapter {
     return super.createIOServer(port, options);
   }
 
-  /** Close the dedicated pub/sub pair on shutdown (the app client is closed by RedisModule). */
+  /** Close the dedicated pub/sub pair AFTER the server stops — quitting first
+   * makes redis-adapter's internal close path reject with "Connection is closed". */
   override async close(server: Server): Promise<void> {
+    await super.close(server);
     for (const conn of this.connections ?? []) {
-      void conn.quit().catch(() => conn.disconnect());
+      try {
+        conn.disconnect();
+      } catch {
+        // Already gone.
+      }
     }
     this.connections = null;
-    await super.close(server);
   }
 }

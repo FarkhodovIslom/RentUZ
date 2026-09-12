@@ -113,6 +113,30 @@ function requestPayload(propertyId: string, overrides: Record<string, unknown> =
   };
 }
 
+type ExpectedNotif = { userId: string; type: string };
+type Notif = Awaited<ReturnType<typeof prisma.notifications.findMany>>[number];
+
+/**
+ * Notification listeners are fire-and-forget with async enrichment, so rows
+ * land a few event-loop turns after the request returns. Poll until every
+ * expected (userId,type) pair is present or the deadline passes, then return
+ * the per-user rows (final assertion still uses expect()).
+ */
+async function waitForNotifications(expected: ExpectedNotif[], ms = 5000): Promise<Notif[][]> {
+  const deadline = Date.now() + ms;
+  let byUser: Notif[][] = [];
+  for (;;) {
+    byUser = await Promise.all(
+      expected.map((e) => prisma.notifications.findMany({ where: { userId: e.userId } })),
+    );
+    const allPresent = expected.every(
+      (e, i) => byUser[i]?.some((n) => n.type === e.type) ?? false,
+    );
+    if (allPresent || Date.now() > deadline) return byUser;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
 beforeAll(async () => {
   prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: DB_URL }) });
   redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -252,7 +276,9 @@ describe('POST /api/v1/rental-requests', () => {
       .send(requestPayload(property.id))
       .expect(201);
 
-    const notifs = await prisma.notifications.findMany({ where: { userId: owner.userId } });
+    const [notifs] = await waitForNotifications([
+      { userId: owner.userId, type: 'REQUEST_NEW' },
+    ]);
     expect(notifs).toHaveLength(1);
     expect(notifs[0].type).toBe('REQUEST_NEW');
   });
@@ -289,8 +315,12 @@ describe('PATCH /api/v1/rental-requests/:id (accept flow)', () => {
     expect(loser.decisionNote).toContain('property rented');
 
     // Tenant winner notified (accepted); loser tenant notified (rejected).
-    const t1Notifs = await prisma.notifications.findMany({ where: { userId: t1.userId } });
-    const t2Notifs = await prisma.notifications.findMany({ where: { userId: t2.userId } });
+    // Phase 6's listeners are fire-and-forget AND do an async enrichment
+    // lookup before the idempotent insert, so poll instead of reading once.
+    const [t1Notifs, t2Notifs] = await waitForNotifications([
+      { userId: t1.userId, type: 'REQUEST_ACCEPTED' },
+      { userId: t2.userId, type: 'REQUEST_REJECTED' },
+    ]);
     expect(t1Notifs.some((n) => n.type === 'REQUEST_ACCEPTED')).toBe(true);
     expect(t2Notifs.some((n) => n.type === 'REQUEST_REJECTED')).toBe(true);
   });
@@ -608,7 +638,19 @@ describe('GET /api/v1/jobs (admin)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(Array.isArray(res.body.data)).toBe(true);
-    expect(res.body.data.length).toBe(4);
+    // Assert by name (not count) so Phase 6's daily-stats/notifications-cleanup
+    // — and any future queue — can't spuriously break this spec.
+    const queueNames = (res.body.data as Array<{ queue: string }>).map((q) => q.queue);
+    for (const expected of [
+      'fx-rates',
+      'orphan-images',
+      'complete-rentals',
+      'expire-pending-requests',
+      'daily-stats',
+      'notifications-cleanup',
+    ]) {
+      expect(queueNames).toContain(expected);
+    }
 
     const owner = await userToken('Owner');
     await request(app.getHttpServer())

@@ -110,12 +110,14 @@ async function makeService(store: TokenStore, otpStore: { code: string; consumed
   };
   const sent: { to: string; code: string }[] = [];
   const sms = { send: vi.fn(async (p: { to: string; code: string }) => sent.push(p)) };
+  const flags = { get: vi.fn(async () => process.env.AUTH_OTP_DEV_MODE === 'true') };
 
   const service = new AuthService(
     prisma as never,
     redis as never,
     passwords as never,
     tokens as never,
+    flags as never,
     sms as never,
   );
   return { service, prisma, otpStore, sent };

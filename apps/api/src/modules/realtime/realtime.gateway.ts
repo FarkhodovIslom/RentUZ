@@ -86,8 +86,7 @@ export class RealtimeGateway
   onModuleInit(): void {
     // One emit path (§28): services emit on the EventBus; the gateway does
     // ALL io.to(...) fanout so REST and socket sends deliver identically.
-    this.events.onConversation('message.created', (payload) => {
-      if (!('message' in payload)) return;
+    this.events.on('message.created', (payload) => {
       const room = `conv:${payload.conversationId}`;
       this.server.to(room).emit('message:new', payload.message);
       // User rooms: multi-device sync for the sender, list/badge updates for
@@ -95,8 +94,7 @@ export class RealtimeGateway
       this.server.to(`user:${payload.senderId}`).emit('message:new', payload.message);
       this.server.to(`user:${payload.recipientId}`).emit('message:new', payload.message);
     });
-    this.events.onConversation('conversation.created', (payload) => {
-      if (!('ownerId' in payload)) return;
+    this.events.on('conversation.created', (payload) => {
       // Both sides see the conversation appear in their list in real time (§27).
       for (const userId of [payload.ownerId, payload.tenantId]) {
         this.server.to(`user:${userId}`).emit('conversation:new', {

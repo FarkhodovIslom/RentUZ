@@ -56,7 +56,7 @@ export class MessagesService {
   ): Promise<MessageDTOT> {
     const conversation = await this.prisma.conversations.findUnique({
       where: { id: conversationId },
-      select: { id: true, tenantId: true, ownerId: true },
+      select: { id: true, propertyId: true, tenantId: true, ownerId: true },
     });
     if (!conversation) throw new NotFoundException();
     if (conversation.tenantId !== senderId && conversation.ownerId !== senderId) {
@@ -112,6 +112,8 @@ export class MessagesService {
         createdAt: message.createdAt,
       },
       conversationId,
+      messageId: message.id,
+      propertyId: conversation.propertyId ?? undefined,
       recipientId,
       senderId,
     });

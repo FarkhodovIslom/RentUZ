@@ -59,11 +59,16 @@ const envSchema = z.object({
   // fanout); grace softens reconnect flicker before presence:online:{id} drops.
   RENTUZ_REALTIME_SCALE: z.coerce.number().int().min(1).max(64).default(1),
   PRESENCE_GRACE_MS: z.coerce.number().int().min(0).max(60_000).default(10_000),
+  // Phase 6 §1.2.7 — notifications retention sweep (days).
+  NOTIFICATIONS_READ_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  NOTIFICATIONS_UNREAD_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('debug'),
   SENTRY_DSN: z.string().default(''),
 
   ADMIN_PHONE: z.string().default('+998901234567'),
+  // Second seeded admin (Phase 7 E2E "two admin contexts"); same password.
+  ADMIN2_PHONE: z.string().default('+998901234568'),
   ADMIN_INITIAL_PASSWORD: z.string().default(''),
 });
 

@@ -31,15 +31,15 @@ A user sees a real-time-ish notification feed (poll-based, see `0_Phase.md` §2)
    - `PATCH /notifications/:id/read`
    - `POST /notifications/read-all`
 3. `apps/api/src/modules/notifications/notification-listeners.ts` — wires every `EventEmitter2` event to `notificationsService.enqueue`:
-   - `rental_request.created` → owner: type `REQUEST_ACCEPTED` (the spec named this oddly; the actual type is `REQUEST_RECEIVED` for owners; using a clearer `REQUEST_NEW` enum value would be cleaner — for MVP, we use the spec's type set and add a new `REQUEST_NEW` enum value to the migration; see §2)
+   - `rental_request.created` → owner: `REQUEST_NEW` (the value ships in the Phase 1 enum already — no migration needed, see §2)
    - `rental_request.accepted` → tenant: `REQUEST_ACCEPTED`
    - `rental_request.rejected` → tenant: `REQUEST_REJECTED`
    - `rental_request.cancelled` → owner
    - `rental_request.completed` → both
-   - `message:new` (from the gateway) → other participant: `NEW_MESSAGE`
+   - `message.created` (EventBus, emitted by Phase 5's MessagesService; the Socket.IO gateway separately broadcasts `message:new` to sockets) → other participant: `NEW_MESSAGE`
    - `property.verified` → owner: `PROPERTY_VERIFIED`
    - `property.rejected` → owner: `PROPERTY_REJECTED` (with `data.reason`)
-   - `property.price_changed` → favorited-by users: `PRICE_CHANGED` (Phase 6 ships the **trigger**; fanout is limited to users with a `favorites` row pointing at the property)
+   - `property.price_changed` → favorited-by users: `PRICE_CHANGED` (Phase 6 ships the **trigger**: owner-only `PATCH /properties/:id/price` on published (ACTIVE/PAUSED/RENTED) listings, which recomputes `priceUzs` via FxService and emits the event; fanout is limited to users with a `favorites` row pointing at the property)
 
 ### 1.2 Owner dashboard
 4. `apps/api/src/modules/analytics/analytics.service.ts`:
@@ -50,10 +50,11 @@ A user sees a real-time-ish notification feed (poll-based, see `0_Phase.md` §2)
    - `GET /owner/analytics?range=7d|30d|90d|custom&from=&to=` — overview + series + top
    - All endpoints are owner-scoped (verify `req.user.id === ownerId` if `:ownerId` param is used; here we use `/me` via `CurrentUser`).
 6. **Daily rollup** (also lands here so analytics are fast for many owners):
-   - `apps/api/src/modules/jobs/processors/daily-stats.processor.ts` — repeatable (daily 02:00 Asia/Tashkent): for each property touched in the last 30 days, recompute `propertyDailyStats` rows for the last 30 days. Source: `propertyViews`, `favorites`, `rentalRequests`, and a count of `messages` whose `conversation.propertyId = property.id` for that day. The rollup is idempotent (UPSERT on `(propertyId, day)`).
+   - `apps/api/src/modules/jobs/daily-stats.processor.ts` — repeatable (daily 02:00 Asia/Tashkent via `repeat.tz`): for each property touched in the last 30 days, recompute `propertyDailyStats` rows for the last 30 days. Source: `propertyViews`, `favorites`, `rentalRequests` (created + accepted-by-decision-day), and a count of `messages` whose `conversation.propertyId = property.id` for that day. The rollup is idempotent (UPSERT on `(propertyId, day)`). `accepted` needs the new `propertyDailyStats.accepted` column (see §2).
+   - **Also (from 3_Phase.md §3 hand-off):** rebuilds the denormalized `properties.views` counter from the `propertyViews` journal after the rollup (nightly batched replacement for the live counter).
    - The owner overview queries this rollup when the range is "exact days" (7/30/90) and falls back to live aggregation for custom ranges.
 7. **Notifications cleanup**:
-   - `apps/api/src/modules/jobs/processors/notifications-cleanup.processor.ts` — repeatable (daily 03:00 Asia/Tashkent): delete `notifications` rows older than 90 days where `readAt IS NOT NULL`, and 30 days where `readAt IS NULL`. Configurable via `NOTIFICATIONS_*` env.
+   - `apps/api/src/modules/jobs/notifications-cleanup.processor.ts` — repeatable (daily 03:00 Asia/Tashkent): delete `notifications` rows older than `NOTIFICATIONS_READ_RETENTION_DAYS` (default 90) where `readAt IS NOT NULL`, and `NOTIFICATIONS_UNREAD_RETENTION_DAYS` (default 30) where `readAt IS NULL`. Both validated in `apps/api/src/config/env.ts` + `.env.example`.
 
 ### 1.3 Web
 8. `apps/web/src/app/(tenant)/notifications/page.tsx` — per §29:
@@ -78,34 +79,26 @@ A user sees a real-time-ish notification feed (poll-based, see `0_Phase.md` §2)
 15. Wire the Phase 4 owner request flow's success path to optimistically invalidate `['owner','requests']` and `['analytics','overview']` TanStack Query keys.
 
 ### 1.4 i18n keys
-`notifications.types.*` (one per type, all 9 spec types), `notifications.group.today`, `notifications.group.yesterday`, `notifications.group.earlier`, `notifications.empty`, `notifications.markAllRead`, `owner.dashboard.*` (greetings, KPI labels, section titles), `owner.analytics.*` (range labels, chart legends, insight lines). All keys are Uzbek.
+`notifications.types.*` — one per `NotifType` enum value; the shipped enum has **7** values (`REQUEST_NEW`, `REQUEST_ACCEPTED`, `REQUEST_REJECTED`, `NEW_MESSAGE`, `PROPERTY_VERIFIED`, `PROPERTY_REJECTED`, `PRICE_CHANGED`) so the web catalog has 7, not 9. `notifications.group.{bugun,kecha,oldin}` (the group keys are the literal bucket names used by `contracts/tz.ts`), `notifications.empty`, `notifications.markAllRead`, `notifications.viewAll`, `notifications.bodies.{request,message,property,price}.{…}` (interpolated templates), `owner.dashboard.*` (greetings, KPI labels, section titles), `owner.analytics.*` (range labels, chart legends, insight lines). All keys are Uzbek. A contract test (`apps/api/src/modules/notifications/notification-i18n.contract.test.ts`) reads the web `uz.json` and asserts every enum value + every listener-emitted bodyKey has a key.
 
 ### 1.5 API contracts
-16. Zod in `packages/contracts`:
-    ```ts
-    export const NotificationDTO = z.object({
-      id: z.string().uuid(),
-      type: z.enum([...NotifType]),
-      titleKey: z.string(), bodyKey: z.string(),
-      data: z.record(z.unknown()),
-      readAt: z.coerce.date().nullable(),
-      createdAt: z.coerce.date(),
-    });
-    export const NotificationListResponse = z.object({
-      data: z.array(NotificationDTO),
-      groups: z.object({ bugun: z.array(NotificationDTO.shape), kecha: z.array(...), oldin: z.array(...) }),
-      meta: PaginationMeta,
-    });
-    export const AnalyticsRange = z.enum(["7d","30d","90d","custom"]);
-    export const AnalyticsQuery = z.object({ range: AnalyticsRange.default("30d"), from: z.coerce.date().optional(), to: z.coerce.date().optional() });
-    ```
+16. Zod in `packages/contracts` (`notifications.ts`, `analytics.ts`, `tz.ts`). Implemented shape:
+    - `NotificationDTO` (`id`, `type` (7-value enum), `titleKey`, `bodyKey`, `data` (`z.record`), `readAt` (nullable, output-coerced), `createdAt`).
+    - `NotificationListQuery` (`cursor?`, `limit` 1–100 default 20); `NotificationListResponse = { data, groups: { bugun, kecha, oldin }, meta }` where `meta` is a **cursor** meta (`{ limit, hasMore, nextCursor }`) — not the offset `PaginationMeta` from `0_Phase.md §92`, since notifications are the documented cursor-pagination exception.
+    - `AnalyticsRange = ["7d","30d","90d","custom"]`.
+    - `AnalyticsQuery = { range (default "30d"), from?, to? }`. **`from`/`to` are `YYYY-MM-DD` strings, not `z.coerce.date()`** — this schema is bound to an `@Query` pipe and `0_Phase.md §1` trap 12 forbids `z.coerce.date()` on input DTOs (crashes Swagger). The service converts.
+    - `OwnerAnalyticsResponse = { overview: {views,favorites,messages,requests,conversion}, granularity, series[], topProperties[] }`.
+    - Shared Tashkent helpers in `tz.ts`: `tashkentDayNumber`, `tashkentDayBucket(now, at)`, `tashkentMidnightUtc`, `groupNotificationsByDay` — the single `tzUtils.ts` the §5 trap calls for (web imports it from `@rentuz/contracts`).
 
 ---
 
 ## 2. Database changes
-- New migration to add a clearer enum value: `ALTER TYPE notif_type ADD VALUE 'REQUEST_NEW';` (for owner "you received a new request"). Other types are reused from Phase 1.
-- `CREATE INDEX notifications_user_unread_idx ON notifications ("userId", "createdAt" DESC) WHERE "readAt" IS NULL;` (partial — supports the navbar poll).
-- New `propertyDailyStats` table already in Phase 1; ensure the indexes from Phase 1 are present.
+Migration `20260912143000_phase6_notifications_analytics` (hand-written SQL — Prisma can't express partial/expression indexes; the auth_core/phase3 precedent). Deltas vs. this section's original plan:
+- **No enum migration.** The §1.1 `REQUEST_NEW` "add" step was already satisfied: Phase 1's `NotifType` enum already contains all 7 values (`ALTER TYPE … ADD VALUE 'REQUEST_NEW'` would even error since it exists). This doc line was stale.
+- Partial index `notifications_user_unread_idx ON notifications ("userId", "createdAt" DESC) WHERE "readAt" IS NULL` (navbar poll) — added.
+- **New (not in the original plan):** partial unique index `notifications_idempotency_key_idx ON notifications ("userId", type, ((data->>'key'))) WHERE data->>'key' IS NOT NULL` — makes `enqueue` idempotent at the DB level (the `ON CONFLICT … DO NOTHING` target), which the 10k-load DoD and the "buggy emitter" note require. Rows without `data.key` stay unconstrained.
+- **New:** `propertyDailyStats.accepted INTEGER NOT NULL DEFAULT 0` — the rollup and `ownerSeries()`/conversion need an accepted-per-day column that Phase 1 didn't create.
+- `messages` already carries a `(conversationId, createdAt)` index from Phase 1; Phase 5 adds the `(conversationId, createdAt, id)` cursor index in its own migration.
 
 ---
 
@@ -154,4 +147,17 @@ Web E2E (Playwright):
 - **Fanout cost on price changes** — limited to `favorites`, not "all users who viewed". The spec is silent; we picked favorited-by because it's a smaller, more meaningful set.
 - **Insight text quality** — these are deterministic rules, not ML. Phase 2 introduces AI insights (§82) as a separate non-blocking enhancement.
 - **i18n key drift** — the `notifications.types` keys must match the `NotifType` enum; a contract test asserts every enum value has a corresponding i18n key.
-- **Time-zone in "Bugun/Kecha"** — both web and server compute in Asia/Tashkent; we have a single `tzUtils.ts` used everywhere. The integration test asserts the bucket for a timestamp at 23:30 Tashkent is "Bugun" even when UTC is the previous day.
+- **Time-zone in "Bugun/Kecha"** — both web and server bucket via the shared `packages/contracts/src/tz.ts` (`tashkentDayBucket`). Uzbekistan is a fixed UTC+5 with no DST, so the helper is pure epoch math. The `tz.test.ts` contract test asserts the boundary both ways: 01:00 Tashkent is "bugun" even though UTC is still the previous day, and 23:30 Tashkent on the current day is "bugun" at 18:30 UTC.
+
+---
+
+## 6. Implementation status — ✅ complete (2026-09-12)
+
+Built on `feature/phase-6-notifications-analytics` (developed in a parallel git worktree off `main` with an isolated docker stack — `docker-compose.phase6.yml`, PostGIS :5435 / Redis :6380 — while Phase 5 was in flight; chat-dependent bits (`message.created`) are wired structurally and activate when Phase 5 merges).
+
+- §1: all modules/paths shipped (notifications module incl. listeners + read endpoints, `PATCH /properties/:id/price` trigger, analytics, both jobs, web bell/page/dashboard/analytics, contracts, i18n).
+- §2: one hand-written migration (see deltas above); `prisma migrate deploy` verified.
+- §3: unit — API 70 (incl. i18n contract test), contracts 48 (incl. Tashkent bucketing); integration 68/68 on the phase-6 stack; E2E Playwright 11/11 (2 new specs).
+- §4 DoD measured: 120-property rollup → 3600 rows in 224 ms (re-run idempotent, `viewsRebuilt=0`); 10k enqueue load (2k distinct keys × 5 replays) deduped to exactly 2000 rows; badge poll 30 s + focus; lint/typecheck/unit/integration/build/E2E green.
+- Deviations/notes: owner shell has no Navbar — the bell renders as a right-aligned header row inside `(owner)/owner/layout.tsx`; the dashboard "Recent messages" tile is hidden until Phase 5's `/conversations` exists (404-tolerant query); E2E runs `DISABLE_JOBS`, so the KPI-vs-DB ground-truth check asserts the live (custom-range) path in E2E while the rollup path is covered by integration; the "suspended user receives but can't act" case relies on the existing global `SuspendedGuard` (no dedicated phase-6 spec).
+- Infra tweak (also useful for Phase 5): `apps/api/vitest.integration.config.ts` now reads `DATABASE_URL`/`REDIS_URL`/`DATABASE_DIRECT_URL` from `apps/api/.env` (shared local stack as fallback) so parallel worktrees can target isolated DBs.

@@ -17,6 +17,8 @@ export class JobsAdminController {
     @InjectQueue('orphan-images') private readonly orphanQueue: Queue,
     @InjectQueue('complete-rentals') private readonly completeRentalsQueue: Queue,
     @InjectQueue('expire-pending-requests') private readonly expireQueue: Queue,
+    @InjectQueue('daily-stats') private readonly dailyStatsQueue: Queue,
+    @InjectQueue('notifications-cleanup') private readonly notificationsCleanupQueue: Queue,
   ) {}
 
   @Get()
@@ -26,6 +28,8 @@ export class JobsAdminController {
       ['orphan-images', this.orphanQueue],
       ['complete-rentals', this.completeRentalsQueue],
       ['expire-pending-requests', this.expireQueue],
+      ['daily-stats', this.dailyStatsQueue],
+      ['notifications-cleanup', this.notificationsCleanupQueue],
     ];
     const out = [];
     for (const [name, queue] of queues) {

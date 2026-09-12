@@ -8,9 +8,14 @@ import { tz } from '@date-fns/tz';
  */
 const TAK = tz('Asia/Tashkent');
 
+/**
+ * "3 500 000 so'm" (6_Phase.md §1.3.13). Intl's uz-UZ grouping separator is
+ * comma in current V8, so group on en-US and swap to ASCII space — stable
+ * across browsers and assertable in E2E.
+ */
 export function formatPriceUzs(priceUzs: number): string {
   const rounded = Math.round(priceUzs);
-  return `${new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 }).format(rounded)} so'm`;
+  return `${rounded.toLocaleString('en-US').replace(/,/g, ' ')} so'm`;
 }
 
 /** "12.09.2026, 14:35" in Tashkent time. */

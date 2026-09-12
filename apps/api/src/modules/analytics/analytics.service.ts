@@ -70,6 +70,16 @@ function tashkentMidnightMs(nowMs: number): number {
   return tashkentDayNumber(nowMs) * DAY_MS - 5 * 3_600_000;
 }
 
+/**
+ * Tashkent calendar date (YYYY-MM-DD) of a Tashkent-midnight epoch. Feeding
+ * ISO timestamps straight into a `::date` cast silently floors them to the
+ * UTC date (19:00Z of the day before) — this keeps the rollup upper bound
+ * from dropping "today" (§5 test found the off-by-one).
+ */
+function isoTashkentDay(ms: number): string {
+  return new Date(ms + 5 * 3_600_000).toISOString().slice(0, 10);
+}
+
 function parseUtcDay(iso: string): number {
   return Date.parse(`${iso}T00:00:00+05:00`); // date-picked-in-Tashkent → UTC epoch
 }
@@ -119,8 +129,8 @@ export class AnalyticsService {
       FROM "propertyDailyStats" s
       JOIN "properties" p ON p.id = s."propertyId"
       WHERE p."ownerId" = ${ownerId}::uuid
-        AND s.day >= ${new Date(range.startMs).toISOString()}::date
-        AND s.day <= ${new Date(range.endMs - DAY_MS).toISOString()}::date
+        AND s.day >= ${isoTashkentDay(range.startMs)}::date
+        AND s.day <= ${isoTashkentDay(range.endMs - DAY_MS)}::date
       GROUP BY 1 ORDER BY 1`;
     return this.fillDays(rows.map(toDayRow), range);
   }
@@ -212,8 +222,8 @@ export class AnalyticsService {
       FROM "properties" p
       LEFT JOIN "propertyDailyStats" s
         ON s."propertyId" = p.id
-        AND s.day >= ${new Date(range.startMs).toISOString()}::date
-        AND s.day <= ${new Date(range.endMs - DAY_MS).toISOString()}::date
+        AND s.day >= ${isoTashkentDay(range.startMs)}::date
+        AND s.day <= ${isoTashkentDay(range.endMs - DAY_MS)}::date
       WHERE p."ownerId" = ${ownerId}::uuid AND p.status <> 'DELETED'
       GROUP BY p.id ORDER BY views DESC, p."createdAt" DESC
       LIMIT ${limit}`;

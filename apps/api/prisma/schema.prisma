@@ -366,7 +366,8 @@ model messages {
   conversation conversations @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       users        @relation(fields: [senderId], references: [id])
 
-  @@index([conversationId, createdAt])
+  // 3-column cursor pagination index (5_Phase.md §2) — (createdAt, id) keyset
+  @@index([conversationId, createdAt, id])
 }
 
 // ─── notifications / moderation / analytics ───

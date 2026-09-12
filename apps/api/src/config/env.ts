@@ -54,6 +54,12 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
 
   FX_RATES_URL: z.string().default('https://cbu.uz/oz/arkhiv-kursov-valyut/json/'),
+
+  // Phase 5 realtime: >1 attaches the Socket.IO Redis adapter (multi-instance
+  // fanout); grace softens reconnect flicker before presence:online:{id} drops.
+  RENTUZ_REALTIME_SCALE: z.coerce.number().int().min(1).max(64).default(1),
+  PRESENCE_GRACE_MS: z.coerce.number().int().min(0).max(60_000).default(10_000),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('debug'),
   SENTRY_DSN: z.string().default(''),
 

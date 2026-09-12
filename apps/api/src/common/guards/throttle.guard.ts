@@ -51,6 +51,9 @@ export class ThrottleGuard implements CanActivate {
     // Tests exercise flows that legitimately exceed per-route limits (e.g. 10
     // failed logins for the lockout case) — an env flag disables the limiter.
     if (process.env.DISABLE_THROTTLE === 'true') return true;
+    // WS context has no HTTP request — socket events are rate-limited by the
+    // gateway's own limiter (message:send), not these route policies.
+    if (context.getType() !== 'http') return true;
 
     const opts = this.reflector.getAllAndOverride<ThrottleOptions>(THROTTLE_KEY, [
       context.getHandler(),

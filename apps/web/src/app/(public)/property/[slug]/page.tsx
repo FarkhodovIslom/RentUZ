@@ -9,6 +9,7 @@ import { ShareButton } from '@/components/property/ShareButton';
 import { LazyMiniMap } from '@/components/property/LazyMiniMap';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { RentalRequestModal } from '@/components/rentals/RentalRequestModal';
+import { StartChatButton } from '@/components/chat/StartChatButton';
 import { VerificationBadge } from '@/components/property/VerificationBadge';
 import { formatPriceUzs, TYPE_OPTIONS } from '@/components/search/filter-utils';
 
@@ -184,14 +185,7 @@ export default async function PropertyDetailsPage({ params }: PageProps) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled
-                title="Phase 5"
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-[12px] bg-primary px-4 text-sm font-semibold text-black opacity-60"
-              >
-                Xabarlash
-              </button>
+              <StartChatButton propertyId={property.id} />
               <RentalRequestModal
                 propertyId={property.id}
                 price={property.price}
@@ -230,14 +224,7 @@ export default async function PropertyDetailsPage({ params }: PageProps) {
               currency={property.currency}
               variant="compact"
             />
-            <button
-              type="button"
-              disabled
-              title="Phase 5"
-              className="inline-flex h-10 items-center rounded-[12px] bg-primary px-4 text-sm font-semibold text-black opacity-60"
-            >
-              Xabarlash
-            </button>
+            <StartChatButton propertyId={property.id} variant="compact" />
           </div>
         </div>
       </div>

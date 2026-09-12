@@ -23,6 +23,8 @@ export interface ImageProcessingOptions {
   minHeight: number;
   /** Variant sizes to emit. Default: 400/800/1600. */
   variantWidths?: number[];
+  /** Destination bucket — chat attachments (Phase 5) use the private one. */
+  bucket?: 'public' | 'private';
 }
 
 @Injectable()
@@ -66,7 +68,11 @@ export class ImageService {
         .webp({ quality: 80 })
         .toBuffer();
       const key = `${options.keyPrefix}/${imageId}/${w}.webp`;
-      await this.storage.putPublic(key, out, 'image/webp');
+      if (options.bucket === 'private') {
+        await this.storage.putPrivate(key, out, 'image/webp');
+      } else {
+        await this.storage.putPublic(key, out, 'image/webp');
+      }
       variants[String(w)] = { buffer: out, contentType: 'image/webp', key };
     }
     return { width: meta.width ?? 0, height: meta.height ?? 0, variants };

@@ -72,11 +72,33 @@ export class PropertiesService {
   }
 
   async findOwn(ownerId: string) {
-    return this.prisma.properties.findMany({
+    const rows = await this.prisma.properties.findMany({
       where: { ownerId, status: { not: 'DELETED' } },
       orderBy: { createdAt: 'desc' },
-      include: { images: { take: 1, orderBy: { ordering: 'asc' } } },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        status: true,
+        views: true,
+        priceUzs: true,
+        currency: true,
+        createdAt: true,
+        images: { take: 1, orderBy: { ordering: 'asc' }, select: { id: true } },
+      },
     });
+    // BigInt priceUzs is not JSON-serializable — Number() at the DTO boundary
+    // (Phase 4 walkthrough debt: GET /properties/me 500ed for owners with rows).
+    return rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      title: r.title,
+      status: r.status,
+      views: r.views,
+      priceUzs: Number(r.priceUzs),
+      currency: r.currency,
+      createdAt: r.createdAt,
+    }));
   }
 
   async findOneForOwner(propertyId: string, ownerId: string) {

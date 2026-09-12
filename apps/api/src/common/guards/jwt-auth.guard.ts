@@ -14,6 +14,11 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // WS message handlers share APP_GUARDs with HTTP (Nest applies global
+    // guards to gateways too). Socket auth is the gateway's ticket handshake
+    // — HTTP guards have no request to read and must not run here.
+    if (context.getType() !== 'http') return true;
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),

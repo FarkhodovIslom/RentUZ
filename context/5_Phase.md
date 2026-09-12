@@ -1,5 +1,53 @@
 # RentUZ MVP — Phase 5: Chat, Realtime, Attachments
 
+> **Status (2026-09-12): COMPLETE.** All §1 tasks implemented; verification gate green
+> (lint, typecheck, unit 104 [contracts 39 + api 65], integration 76 incl. the
+> 2-instance Redis-adapter suite, build, E2E 9/9 incl. chat-flow, boot gate
+> `/health` + `/ready` + socket.io handshake smoke). Deviations from the
+> original plan recorded in `walkthroughs/phase-5-chat.md` and summarized below:
+>
+> 1. **Attachment key layout** (§1.1.4) — `chat/{conversationId}/{attachmentId}/800.webp`
+>    (single 800w WebP variant). The doc's `chat/{conversationId}/{messageId}/`
+>    is impossible: uploads happen before the message row exists. Send-time
+>    validation enforces prefix containment + private-bucket HEAD existence →
+>    400 `INVALID_ATTACHMENT_KEY`. Signed URLs mint on demand via
+>    `GET /conversations/:id/attachments/url?key=` (600 s).
+> 2. **Single shared `/chat?c={id}` page for tenant AND owner** — the
+>    conversation API is participant-based; the doc's separate
+>    `/owner/messages` (§1.3.15) is a recorded deviation. Owner sidebar
+>    "Xabarlar" un-`soon`s and links to `/chat`.
+> 3. **BottomNav grew 6 → 7 slots** ("Xabarlar" + unread badge,
+>    `grid-cols-7`); Navbar got the same badge (60 s polling fallback —
+>    RequestsBadge pattern).
+> 4. **2-instance test = local integration suite**
+>    (`realtime-two-instance.integration.test.ts`, `RENTUZ_REALTIME_SCALE=2`);
+>    the 50 rps/20 s load test is an optional manual script, not a gate.
+>    CI stays lint/typecheck/unit/build (unchanged this phase).
+> 5. **One emit path** — `MessagesService.send`/`ConversationsService.getOrCreate`
+>    emit on the in-app EventBus (`message.created`, `conversation.created`);
+>    the gateway subscribes and does all `io.to(...)` fanout. REST and socket
+>    sends deliver identically. Fanout: `message:new` → `conv:{id}` +
+>    `user:{recipientId}` + `user:{senderId}` (multi-device + list/badge
+>    updates); `conversation:new` → both participants' user rooms.
+> 6. **Ticket payload `{ sub, jti }` + Redis `GETDEL`** (single-use), new
+>    `PRESENCE_GRACE_MS` env (default 10000; 2000 in E2E webServer env).
+> 7. **Suspended check at the service layer, DB-fresh** (§54): HTTP guards
+>    don't cover WS events, and JWT status claims go stale (0_Phase trap 14).
+> 8. **Cursor pagination via pure Prisma** — `orderBy createdAt desc, id desc`
+>    + `cursor: { id: before }`, `skip: 1`, `take: limit+1` (hasMore); no raw
+>    SQL. The 3-col index serves it.
+> 9. **Global guards skip WS contexts** — APP_GUARDs (JwtAuth/Throttle/
+>    Suspended/Role) are applied to gateway message handlers too; all four
+>    return true for non-HTTP contexts (socket auth is the ticket handshake;
+>    `message:send` has its own manual Redis rate limiter, 30/min §98).
+> 10. **Gateway emits a `ready` event** after handleConnection's async work
+>     lands (ticket consume + rooms) — clients wait for it before emitting;
+>     plain `connect` fires too early and races `conversation:join`.
+> 11. **Migration guard** — Prisma re-emitted a DROP of the raw PostGIS GIST
+>     index `properties_location_gix` (invisible to the schema because
+>     `location` is `Unsupported`). The migration file restores it by hand
+>     (`CREATE INDEX IF NOT EXISTS`), documented in the walkthrough.
+>
 > Cross-cutting decisions live in `0_Phase.md`. Property/owner rules are in `2_Phase.md`. Conversation surfaces used here were stubbed in `1_Phase.md`. This phase lights up the conversation layer that connects tenants and owners, and the only realtime channel in the MVP.
 
 ## Goal

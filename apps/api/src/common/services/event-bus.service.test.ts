@@ -6,8 +6,8 @@ describe('EventBusService', () => {
     const bus = new EventBusService();
     const created = vi.fn();
     const accepted = vi.fn();
-    bus.on('rental_request.created', created);
-    bus.on('rental_request.accepted', accepted);
+    bus.onRentalRequest('rental_request.created', created);
+    bus.onRentalRequest('rental_request.accepted', accepted);
 
     const payload: RentalRequestEventPayload = {
       requestId: 'r1',
@@ -26,8 +26,8 @@ describe('EventBusService', () => {
       throw new Error('boom');
     });
     const good = vi.fn();
-    bus.on('rental_request.cancelled', bad);
-    bus.on('rental_request.cancelled', good);
+    bus.onRentalRequest('rental_request.cancelled', bad);
+    bus.onRentalRequest('rental_request.cancelled', good);
 
     expect(() =>
       bus.emit('rental_request.cancelled', {

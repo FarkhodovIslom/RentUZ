@@ -31,6 +31,34 @@ export interface RentalRequestEventPayload {
   note?: string;
 }
 
+/** Phase 5 chat events — one emit path for REST and socket sends (§28). */
+export const CONVERSATION_EVENTS = ['conversation.created', 'message.created'] as const;
+
+export type ConversationEvent = (typeof CONVERSATION_EVENTS)[number];
+
+export interface ConversationCreatedPayload {
+  conversationId: string;
+  propertyId: string;
+  tenantId: string;
+  ownerId: string;
+}
+
+export interface MessageCreatedPayload {
+  /** ConversationDTO-shaped message row (senderId, text, attachments). */
+  message: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    text: string;
+    attachments: Array<{ key: string; mime: string; width: number; height: number; size: number }>;
+    createdAt: Date;
+  };
+  conversationId: string;
+  /** The other participant — notifications + user-room fanout target. */
+  recipientId: string;
+  senderId: string;
+}
+
 @Injectable()
 export class EventBusService {
   private readonly emitter = new EventEmitter();
@@ -41,14 +69,25 @@ export class EventBusService {
     this.emitter.setMaxListeners(50);
   }
 
-  on(event: RentalRequestEvent, handler: (payload: RentalRequestEventPayload) => void): void {
+  /** Rental-request lifecycle subscription (Phase 4; notifications stub). */
+  onRentalRequest(event: RentalRequestEvent, handler: (payload: RentalRequestEventPayload) => void): void {
     this.emitter.on(event, handler);
   }
 
-  emit(event: RentalRequestEvent, payload: RentalRequestEventPayload): void {
+  /** Chat events subscription (Phase 5; realtime gateway + notifications). */
+  onConversation(
+    event: ConversationEvent,
+    handler: (payload: ConversationCreatedPayload | MessageCreatedPayload) => void,
+  ): void {
+    this.emitter.on(event, handler as (...args: unknown[]) => void);
+  }
+
+  emit(event: RentalRequestEvent, payload: RentalRequestEventPayload): void;
+  emit(event: ConversationEvent, payload: ConversationCreatedPayload | MessageCreatedPayload): void;
+  emit(event: string, payload: unknown): void {
     for (const [, listener] of this.emitter.listeners(event).entries()) {
       try {
-        (listener as (p: RentalRequestEventPayload) => void)(payload);
+        (listener as (p: unknown) => void)(payload);
       } catch (error) {
         this.logger.error(
           `event listener failed (${event}): ${error instanceof Error ? error.message : String(error)}`,

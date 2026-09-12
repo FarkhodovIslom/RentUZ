@@ -13,7 +13,9 @@
     "saved": "Saqlangan",
     "profile": "Profil",
     "login": "Kirish",
-    "requests": "So'rovlar"
+    "requests": "So'rovlar",
+    "chat": "Xabarlar",
+    "chatEmpty": "Xabarlar yo'q"
   },
   "home": {
     "badge": "O'zbekistonning zamonaviy ijara bozori",
@@ -349,5 +351,28 @@
       "description": "Bugun ro'yxatdan o'ting va minglab e'lonlarni ko'ring",
       "cta": "Boshlash"
     }
+  },
+  "chat": {
+    "title": "Xabarlar",
+    "back": "Orqaga",
+    "online": "Onlayn",
+    "offline": "Offlayn",
+    "loading": "Yuklanmoqda...",
+    "empty": "Hali suhbatlar yo'q — e'lon sahifasidan mulk egasiga yozing",
+    "emptyConv": "Xabarlar yo'q — birinchi xabarni yozing",
+    "pickPrompt": "Suhbatni tanlang",
+    "loadOlder": "Eskiroq xabarlar",
+    "placeholder": "Xabar yozing...",
+    "send": "Yuborish",
+    "sendFailed": "Xabar yuborilmadi — qayta urinib ko'ring",
+    "read": "O'qilgan",
+    "typing": "Yozmoqda...",
+    "attachment": {
+      "label": "Rasm qo'shish",
+      "invalid": "Faqat JPEG/PNG/WebP, 10 MB gacha rasm mumkin",
+      "failed": "Rasm yuklanmadi"
+    },
+    "startChat": "Xabarlash",
+    "ownListing": "Sizning e'loningiz"
   }
 }

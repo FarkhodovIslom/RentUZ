@@ -31,6 +31,9 @@ export default defineConfig({
         // repeat local runs (Redis persists between runs).
         DISABLE_JOBS: 'true',
         DISABLE_THROTTLE: 'true',
+        // Phase 5: snappy presence-offline transitions for the chat spec's
+        // online-dot assertions (default 10 s is too slow for E2E).
+        PRESENCE_GRACE_MS: '2000',
       },
     },
     {

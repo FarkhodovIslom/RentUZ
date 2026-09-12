@@ -46,10 +46,10 @@ export class NotificationsService implements OnModuleInit {
     private readonly events: EventBusService,
   ) {}
 
-  /** Subscribe to every rental-request lifecycle event (§70). */
+  /** Subscribe to every rental-request lifecycle event (§70) + chat messages (§84). */
   onModuleInit(): void {
     for (const [event, mapping] of Object.entries(EVENT_TO_NOTIF)) {
-      this.events.on(event as never, (payload: RentalRequestEventPayload) => {
+      this.events.onRentalRequest(event as never, (payload: RentalRequestEventPayload) => {
         void this.enqueue({
           userId: payload[mapping.toUserId],
           type: mapping.type,
@@ -59,6 +59,23 @@ export class NotificationsService implements OnModuleInit {
         });
       });
     }
+    // Phase 5: message.created → NEW_MESSAGE for the counterpart (§84).
+    this.events.onConversation('message.created', (payload) => {
+      if (!('message' in payload)) return;
+      void this.enqueue({
+        userId: payload.recipientId,
+        type: 'NEW_MESSAGE',
+        titleKey: 'message.title',
+        bodyKey: 'message.new',
+        data: {
+          context: 'chat',
+          conversationId: payload.conversationId,
+          messageId: payload.message.id,
+          senderId: payload.senderId,
+          preview: payload.message.text.slice(0, 80),
+        },
+      });
+    });
   }
 
   /** Fire-and-forget row insert; failures log but never break the caller. */

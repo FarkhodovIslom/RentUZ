@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { FavoritesBadge } from '@/components/favorites/FavoritesBadge';
+import { ChatBadge } from '@/components/chat/ChatBadge';
 import { RequestsBadge } from '@/components/rentals/RequestsBadge';
 
 export async function Navbar() {
@@ -28,6 +29,10 @@ export async function Navbar() {
           <a href="/rental-requests" className="inline-flex items-center hover:text-fg">
             {t('requests')}
             <RequestsBadge />
+          </a>
+          <a href="/chat" className="inline-flex items-center hover:text-fg">
+            {t('chat')}
+            <ChatBadge />
           </a>
         </nav>
         <a href="/login" className={loginClass}>

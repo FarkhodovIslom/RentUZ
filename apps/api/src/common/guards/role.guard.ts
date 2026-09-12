@@ -15,6 +15,8 @@ export class RoleGuard implements CanActivate {
       context.getClass(),
     ]);
     if (!required || required.length === 0) return true;
+    // WS context: no gateway route is role-gated (admin uses HTTP only).
+    if (context.getType() !== 'http') return true;
 
     const request = context.switchToHttp().getRequest<Request & { user?: AuthUser }>();
     if (!request.user || !required.includes(request.user.role)) {

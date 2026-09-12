@@ -31,7 +31,7 @@ export class TokenService {
     });
   }
 
-  signSocketTicket(payload: { sub: string }): string {
+  signSocketTicket(payload: { sub: string; jti?: string }): string {
     return this.jwt.sign(payload, {
       secret: process.env.SOCKET_TICKET_SECRET,
       expiresIn: '60s',
@@ -39,8 +39,8 @@ export class TokenService {
     });
   }
 
-  verifySocketTicket(token: string): { sub: string } {
-    return this.jwt.verify<{ sub: string }>(token, {
+  verifySocketTicket(token: string): { sub: string; jti?: string } {
+    return this.jwt.verify<{ sub: string; jti?: string }>(token, {
       secret: process.env.SOCKET_TICKET_SECRET,
       audience: 'socket',
     });

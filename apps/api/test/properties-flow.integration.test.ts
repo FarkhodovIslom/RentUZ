@@ -191,6 +191,48 @@ describe('Properties CRUD — owner', () => {
     await request(app.getHttpServer()).get('/api/v1/properties/me').expect(401);
   });
 
+  it('GET /properties/me returns JSON-serializable DTOs (BigInt priceUzs → number)', async () => {
+    // Phase 4 debt regression: raw rows 500ed at BigInt serialization once an
+    // owner had ≥1 property. Mirrors the flow above but asserts /properties/me.
+    const phone = await uniquePhone();
+    const reg = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({ name: 'Owner', phone, password: 'paroltest12345' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/verify-phone')
+      .send({ phone, code: reg.body.data.otpDev as string, purpose: 'REGISTRATION' })
+      .expect(200);
+    const login = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: 'paroltest12345' })
+      .expect(200);
+    const token = login.body.data.accessToken as string;
+
+    await request(app.getHttpServer())
+      .post('/api/v1/properties')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/properties/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const listings = res.body.data as Array<{
+      id: string;
+      title: string;
+      status: string;
+      views: number;
+      priceUzs: number;
+      currency: string;
+      createdAt: string;
+    }>;
+    expect(listings.length).toBeGreaterThanOrEqual(1);
+    expect(typeof listings[0]!.priceUzs).toBe('number');
+    expect(Number.isFinite(listings[0]!.priceUzs)).toBe(true);
+    expect(listings[0]!.status).toBe('DRAFT');
+  });
+
   it('GET /public/locations returns 78 seeded entries', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/v1/public/locations')

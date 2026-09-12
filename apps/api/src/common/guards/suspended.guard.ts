@@ -9,6 +9,9 @@ import type { AuthUser } from '../decorators/current-user.decorator.js';
 @Injectable()
 export class SuspendedGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
+    // WS context: suspension is checked DB-fresh in the services (§54) —
+    // the gateway has no HTTP request/user claim to inspect here.
+    if (context.getType() !== 'http') return true;
     const request = context.switchToHttp().getRequest<Request & { user?: AuthUser }>();
     const method = request.method;
     if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return true;

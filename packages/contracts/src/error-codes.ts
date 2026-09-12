@@ -23,6 +23,11 @@ export const DOMAIN_ERROR_CODES = [
   'CANNOT_REPORT_SELF',
   'REPORT_ALREADY_OPEN',
   'OWNER_SUSPENDED',
+  // Phase 5 chat (§54/§94)
+  'CONVERSATION_NOT_FOUND',
+  'NOT_PARTICIPANT',
+  'INVALID_TICKET',
+  'INVALID_ATTACHMENT_KEY',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];

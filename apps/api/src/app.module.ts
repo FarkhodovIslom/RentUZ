@@ -21,6 +21,8 @@ import { FavoritesModule } from './modules/favorites/favorites.module.js';
 import { RentalRequestsModule } from './modules/rental-requests/rental-requests.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { JobsModule } from './modules/jobs/jobs.module.js';
+import { ConversationsModule } from './modules/conversations/conversations.module.js';
+import { RealtimeModule } from './modules/realtime/realtime.module.js';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { JobsModule } from './modules/jobs/jobs.module.js';
     RentalRequestsModule,
     NotificationsModule,
     JobsModule,
+    ConversationsModule,
+    RealtimeModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

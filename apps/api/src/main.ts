@@ -8,13 +8,16 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { z } from 'zod';
 import {
+  CreateConversationInput,
   ForgotPasswordInput,
   LoginInput,
   RegisterInput,
   ResetPasswordInput,
+  SendMessageInput,
   VerifyPhoneInput,
 } from '@rentuz/contracts';
 import { AppModule } from './app.module.js';
+import { RedisIoAdapter } from './modules/realtime/redis-io.adapter.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -24,6 +27,9 @@ async function bootstrap(): Promise<void> {
   // Applies @Body({ schema: ZodSchema }) validation everywhere (§38 DTO validation).
   app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
   app.enableShutdownHooks();
+  // Phase 5: socket.io rides the same HTTP server; the adapter is a no-op
+  // unless RENTUZ_REALTIME_SCALE > 1 (multi-instance pub/sub fanout).
+  app.useWebSocketAdapter(new RedisIoAdapter(app));
 
   const configService = app.get(ConfigService);
   const corsOrigins = String(configService.get<string>('CORS_ORIGINS') ?? 'http://localhost:3000')
@@ -54,6 +60,8 @@ async function bootstrap(): Promise<void> {
       VerifyPhoneInput,
       ForgotPasswordInput,
       ResetPasswordInput,
+      CreateConversationInput,
+      SendMessageInput,
     };
     document.components = {
       ...(document.components ?? {}),
@@ -76,6 +84,7 @@ async function bootstrap(): Promise<void> {
       '/api/v1/auth/verify-phone': 'VerifyPhoneInput',
       '/api/v1/auth/forgot-password': 'ForgotPasswordInput',
       '/api/v1/auth/reset-password': 'ResetPasswordInput',
+      '/api/v1/conversations': 'CreateConversationInput',
     };
     for (const [path, schemaName] of Object.entries(bodyFor)) {
       const handler = authPaths[path]?.post;
@@ -84,6 +93,13 @@ async function bootstrap(): Promise<void> {
           content: { 'application/json': { schema: refOf(schemaName) } },
         } satisfies { content: Record<string, { schema?: unknown }> };
       }
+    }
+    // Chat message send bodies (nested path).
+    const sendMessageHandler = authPaths['/api/v1/conversations/{id}/messages']?.post;
+    if (sendMessageHandler) {
+      sendMessageHandler.requestBody = {
+        content: { 'application/json': { schema: refOf('SendMessageInput') } },
+      } satisfies { content: Record<string, { schema?: unknown }> };
     }
 
     SwaggerModule.setup('docs', app, document);

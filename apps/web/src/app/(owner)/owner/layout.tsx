@@ -22,7 +22,7 @@ export default async function OwnerLayout({ children }: { children: ReactNode })
     { href: '/owner/properties', label: t('properties') },
     { href: '/owner/properties/create', label: t('newProperty') },
     { href: '/owner/requests', label: t('requests') },
-    { href: '/owner/messages', label: t('messages'), soon: true },
+    { href: '/chat', label: t('messages') },
     { href: '/owner/analytics', label: t('analytics'), soon: true },
     { href: '/profile', label: t('profile') },
   ];

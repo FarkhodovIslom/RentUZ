@@ -4,6 +4,7 @@ import type { RentalRequestDTOT } from '@rentuz/contracts';
 import { requireSession } from '@/lib/session';
 import { serverApiGet } from '@/lib/server-api';
 import { EmptyState } from '@rentuz/ui';
+import { StartChatButton } from '@/components/chat/StartChatButton';
 import { StatusBadge } from '@/components/rentals/StatusBadge';
 import { formatPriceUzs } from '@/components/search/filter-utils';
 
@@ -106,14 +107,7 @@ export default async function MyRentalsPage({ searchParams }: PageProps) {
                   <p className="text-sm font-bold text-primary">
                     {formatPriceUzs(r.priceSnapshot)} {r.currency}
                   </p>
-                  <button
-                    type="button"
-                    disabled
-                    title="Phase 5"
-                    className="inline-flex h-8 items-center rounded-[10px] bg-primary px-3 text-xs font-semibold text-black opacity-60"
-                  >
-                    Bog&apos;lanish
-                  </button>
+                  <StartChatButton propertyId={r.propertyId} variant="compact" />
                 </div>
               </div>
             </li>

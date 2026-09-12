@@ -54,6 +54,11 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
 
   FX_RATES_URL: z.string().default('https://cbu.uz/oz/arkhiv-kursov-valyut/json/'),
+
+  // Phase 6 §1.2.7 — notifications retention sweep (days).
+  NOTIFICATIONS_READ_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  NOTIFICATIONS_UNREAD_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('debug'),
   SENTRY_DSN: z.string().default(''),
 

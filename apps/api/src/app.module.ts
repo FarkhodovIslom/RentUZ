@@ -20,6 +20,7 @@ import { SearchModule } from './modules/search/search.module.js';
 import { FavoritesModule } from './modules/favorites/favorites.module.js';
 import { RentalRequestsModule } from './modules/rental-requests/rental-requests.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { JobsModule } from './modules/jobs/jobs.module.js';
 
 @Module({
@@ -37,6 +38,7 @@ import { JobsModule } from './modules/jobs/jobs.module.js';
     FavoritesModule,
     RentalRequestsModule,
     NotificationsModule,
+    AnalyticsModule,
     JobsModule,
   ],
   providers: [

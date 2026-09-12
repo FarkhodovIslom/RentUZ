@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { FavoritesBadge } from '@/components/favorites/FavoritesBadge';
 import { RequestsBadge } from '@/components/rentals/RequestsBadge';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 export async function Navbar() {
   const t = await getTranslations('nav');
@@ -30,9 +31,12 @@ export async function Navbar() {
             <RequestsBadge />
           </a>
         </nav>
-        <a href="/login" className={loginClass}>
-          {t('login')}
-        </a>
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <a href="/login" className={loginClass}>
+            {t('login')}
+          </a>
+        </div>
       </div>
     </header>
   );

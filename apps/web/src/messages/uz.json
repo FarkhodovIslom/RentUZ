@@ -13,7 +13,8 @@
     "saved": "Saqlangan",
     "profile": "Profil",
     "login": "Kirish",
-    "requests": "So'rovlar"
+    "requests": "So'rovlar",
+    "notifications": "Bildirishnomalar"
   },
   "home": {
     "badge": "O'zbekistonning zamonaviy ijara bozori",
@@ -179,7 +180,13 @@
       },
       "recentProperties": "So'nggi e'lonlarim",
       "noProperties": "Hali e'lon yo'q. Birinchi e'loningizni yarating!",
-      "create": "E'lon berish"
+      "create": "E'lon berish",
+      "recentRequests": "So'nggi so'rovlar",
+      "activeProperties": "Faol e'lonlar",
+      "recentMessages": "So'nggi xabarlar",
+      "noRequests": "Hali so'rovlar yo'q",
+      "viewAllRequests": "Barcha so'rovlar",
+      "trends14": "14 kunlik dinamikada"
     },
     "properties": {
       "title": "E'lonlarim",
@@ -243,6 +250,36 @@
         "washer": "Kir yuvish mashina",
         "elevator": "Lift",
         "security": "Qo'riqchi"
+      }
+    },
+    "analytics": {
+      "title": "Analitika",
+      "rangeLabel": "Davr",
+      "range": {
+        "7d": "7 kun",
+        "30d": "30 kun",
+        "90d": "90 kun",
+        "custom": "Maxsus oralik"
+      },
+      "from": "Sanadan",
+      "to": "Sana gacha",
+      "apply": "Qo'llash",
+      "charts": {
+        "trend": "Ko'rishlar va so'rovlar dinamikasi",
+        "top": "Eng ko'p ko'rilgan e'lonlar",
+        "views": "Ko'rishlar",
+        "requests": "So'rovlar"
+      },
+      "insightsTitle": "Tahlil xulosalari",
+      "insights": {
+        "noData": "Bu davrda yetarli ma'lumot yo'q — e'lonlaringiz faollashgacha kuting.",
+        "viewsUp": "Ko'rishlar oldingi davrga qaraganda {percent}% ga oshdi.",
+        "viewsDown": "Ko'rishlar oldingi davrga qaraganda {percent}% ga kamaydi.",
+        "convHigh": "So'rov konversiyasi yuqori: {percent}% — narx siyosatingiz to'g'ri.",
+        "convLow": "So'rov konversiyasi past: {percent}% — narx yoki fotosuratlarni ko'rib chiqing.",
+        "convNone": "Bu davrda hali birorta so'rov yakunlanmadi.",
+        "topShare": "Eng faol e'loningiz \"{title}\" barcha ko'rishlarning {percent}% ini tortdi.",
+        "bestWeek": "Eng yaxshi hafta: {week} ({views} ko'rish)."
       }
     }
   },
@@ -348,6 +385,47 @@
       "title": "Mos uyingiz sizni kutmoqda",
       "description": "Bugun ro'yxatdan o'ting va minglab e'lonlarni ko'ring",
       "cta": "Boshlash"
+    }
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "empty": "Hozircha bildirishnomalar yo'q",
+    "markAllRead": "Hammasini o'qish",
+    "viewAll": "Barchasini ko'rish",
+    "unreadBadge": "O'qilmagan bildirishnomalar soni: {count}",
+    "group": {
+      "bugun": "Bugun",
+      "kecha": "Kecha",
+      "oldin": "Oldin"
+    },
+    "types": {
+      "requestNew": "Yangi so'rov",
+      "requestAccepted": "So'rov qabul qilindi",
+      "requestRejected": "So'rov rad etildi",
+      "newMessage": "Yangi xabar",
+      "propertyVerified": "E'lon tasdiqlandi",
+      "propertyRejected": "E'lon rad etildi",
+      "priceChanged": "Narx o'zgardi"
+    },
+    "bodies": {
+      "request": {
+        "new": "{name} \"{property}\" e'loniga so'rov yubordi",
+        "accepted": "\"{property}\" bo'yicha so'rovingiz qabul qilindi",
+        "rejected": "\"{property}\" bo'yicha so'rovingiz rad etildi",
+        "cancelled": "{name} \"{property}\" e'loniga so'rovni bekor qildi",
+        "completed": "\"{property}\" bo'yicha ijara yakunlandi",
+        "expired": "\"{property}\" bo'yicha so'rovingiz muddati o'tib ketdi"
+      },
+      "message": {
+        "new": "{name} sizga xabar yubordi"
+      },
+      "property": {
+        "verified": "\"{property}\" e'loningiz tekshiruvdan o'tdi va ko'rinadigan bo'ldi",
+        "rejected": "\"{property}\" e'loningiz tekshiruvdan o'tmadi: {reason}"
+      },
+      "price": {
+        "changed": "\"{property}\" e'loni narxi {oldPrice} dan {newPrice} ga o'zgardi"
+      }
     }
   }
 }

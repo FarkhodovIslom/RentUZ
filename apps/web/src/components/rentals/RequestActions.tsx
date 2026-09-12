@@ -29,6 +29,9 @@ export function RequestActions({ requestId, status }: { requestId: string; statu
       toast(next === 'ACCEPTED' ? 'So\'rov qabul qilindi' : "So'rov rad etildi");
       void queryClient.invalidateQueries({ queryKey: ['requests-list'] });
       void queryClient.invalidateQueries({ queryKey: ['requests-count'] });
+      // Phase 6 §1.3 item 15 — dashboard/analytics tiles read these keys.
+      void queryClient.invalidateQueries({ queryKey: ['owner', 'requests'] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics', 'overview'] });
       router.refresh();
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PROPERTY_NOT_AVAILABLE') {

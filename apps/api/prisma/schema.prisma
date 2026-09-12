@@ -431,6 +431,8 @@ model propertyDailyStats {
   favorites  Int      @default(0)
   messages   Int      @default(0)
   requests   Int      @default(0)
+  /// Accepted requests per day — needed by ownerSeries()/conversion (6_Phase.md §1.2.4).
+  accepted   Int      @default(0)
 
   property properties @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 

@@ -1,0 +1,72 @@
+# Phase 6 parallel-dev stack — isolated clone of docker-compose.yml so the
+# main (Phase 5) stack on 5434/6379/9000 keeps running untouched.
+# Ports: PostGIS 5435, Redis 6380, MinIO 9200/9201. Separate volumes.
+# Usage: docker compose -p rentuz-phase6 -f docker-compose.phase6.yml up -d
+name: rentuz-phase6
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: rentuz6-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rentuz
+    ports:
+      - "5435:5432"
+    volumes:
+      - rentuz6_pgdata:/var/lib/postgresql/data
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rentuz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: rentuz6-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio:
+    image: minio/minio
+    container_name: rentuz6-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9200:9000"
+      - "9201:9001"
+    volumes:
+      - rentuz6_minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio-init:
+    image: minio/mc
+    container_name: rentuz6-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb -p --ignore-existing local/rentuz-public;
+      mc mb -p --ignore-existing local/rentuz-private;
+      mc anonymous set download local/rentuz-public;
+      echo 'minio buckets ready'"
+
+volumes:
+  rentuz6_pgdata:
+  rentuz6_minio:

@@ -13,6 +13,7 @@ export const NOTIF_TYPES = [
   'PROPERTY_VERIFIED',
   'PROPERTY_REJECTED',
   'PRICE_CHANGED',
+  'VERIFICATION_INFO_REQUESTED',
 ] as const;
 
 export const NotifTypeSchema = z.enum(NOTIF_TYPES);

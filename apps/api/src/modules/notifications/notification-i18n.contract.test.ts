@@ -37,6 +37,7 @@ describe('NotifType ↔ i18n coverage', () => {
       'property.verified',
       'property.rejected',
       'price.changed',
+      'verification.infoRequested',
     ];
     for (const key of bodyKeys) {
       const [ns, leaf] = key.split('.') as [string, string];

@@ -70,13 +70,32 @@ export interface MessageCreatedPayload {
   propertyId?: string;
 }
 
+/**
+ * Phase 7 (verification §60): admin asks the owner for more info — the
+ * property stays in the queue, the owner gets a VERIFICATION_INFO_REQUESTED
+ * notification carrying the admin's message.
+ */
+export const VERIFICATION_INFO_EVENTS = ['verification.info_requested'] as const;
+
+export type VerificationInfoEvent = (typeof VERIFICATION_INFO_EVENTS)[number];
+
+export interface VerificationInfoPayload {
+  propertyId: string;
+  ownerId: string;
+  title?: string;
+  /** Admin's request text (becomes the notification body). */
+  message: string;
+}
+
 /** Event → payload map; on()/emit() are keyed off it. */
 export type BusEventPayloads = {
-  [E in RentalRequestEvent | PropertyEvent | MessageEvent]: E extends RentalRequestEvent
+  [E in RentalRequestEvent | PropertyEvent | MessageEvent | VerificationInfoEvent]: E extends RentalRequestEvent
     ? RentalRequestEventPayload
     : E extends PropertyEvent
       ? PropertyEventPayload
-      : MessageCreatedPayload;
+      : E extends VerificationInfoEvent
+        ? VerificationInfoPayload
+        : MessageCreatedPayload;
 };
 
 @Injectable()

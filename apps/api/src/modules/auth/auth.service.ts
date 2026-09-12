@@ -11,6 +11,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { RedisService } from '../../redis/redis.service.js';
 import { PasswordService } from '../../common/services/password.service.js';
+import { FeatureFlagsService } from '../../common/services/feature-flags.service.js';
 import { TokenService } from '../../common/services/token.service.js';
 import type {
   LoginInputT,
@@ -67,6 +68,7 @@ export class AuthService {
     private readonly redis: RedisService,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
+    private readonly flags: FeatureFlagsService,
     @Inject(SMS_SENDER) private readonly sms: SmsSender,
   ) {}
 
@@ -293,7 +295,10 @@ export class AuthService {
       },
     });
     await this.sms.send({ to: phone, code, purpose });
-    return process.env.AUTH_OTP_DEV_MODE === 'true' && process.env.NODE_ENV !== 'production'
+    // AUTH_OTP_DEV_MODE reads the runtime flag (§5 restart-free overrides;
+    // production is hard-false in FeatureFlagsService, so the extra
+    // NODE_ENV check is belt-and-braces).
+    return (await this.flags.get('AUTH_OTP_DEV_MODE')) === true && process.env.NODE_ENV !== 'production'
       ? code
       : undefined;
   }

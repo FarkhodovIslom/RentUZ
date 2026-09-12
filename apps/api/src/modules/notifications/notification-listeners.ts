@@ -1,10 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import type { NotifType } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import {
   EventBusService,
   type PropertyEventPayload,
   type RentalRequestEventPayload,
+  type VerificationInfoPayload,
 } from '../../common/services/event-bus.service.js';
 import { NotificationsService } from './notifications.service.js';
 
@@ -98,6 +100,11 @@ export class NotificationListeners implements OnModuleInit {
     // ── price change → fan-out to favoriting users (§84: viewers NOT notified) ──
     this.events.on('property.price_changed', (payload: PropertyEventPayload) => {
       void this.fanOutPriceChange(payload);
+    });
+
+    // ── verification info request (§60, Phase 7) ──
+    this.events.on('verification.info_requested', (payload: VerificationInfoPayload) => {
+      void this.enqueueVerificationInfo(payload);
     });
   }
 
@@ -199,6 +206,25 @@ export class NotificationListeners implements OnModuleInit {
         `price-change fanout failed for ${payload.propertyId}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  private async enqueueVerificationInfo(payload: VerificationInfoPayload): Promise<void> {
+    const title = payload.title ?? (await this.propertyTitle(payload.propertyId));
+    // Distinct admin messages notify; replaying the same message dedupes.
+    const messageKey = createHash('sha1').update(payload.message).digest('hex').slice(0, 12);
+    await this.notifications.enqueue({
+      userId: payload.ownerId,
+      type: 'VERIFICATION_INFO_REQUESTED',
+      titleKey: 'notifications.types.verificationInfoRequested',
+      bodyKey: 'verification.infoRequested',
+      data: {
+        key: `verification:${payload.propertyId}:info:${messageKey}`,
+        propertyId: payload.propertyId,
+        message: payload.message,
+        context: 'property',
+        ...(title ? { propertyTitle: title } : {}),
+      },
+    });
   }
 
   private async propertyTitle(propertyId: string): Promise<string | null> {

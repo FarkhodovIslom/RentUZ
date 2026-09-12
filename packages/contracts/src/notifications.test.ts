@@ -27,7 +27,7 @@ function notif(overrides: Record<string, unknown> = {}) {
 }
 
 describe('NotifTypeSchema', () => {
-  it('mirrors the seven Prisma enum values (i18n contract test depends on this list)', () => {
+  it('mirrors the Prisma enum values (i18n contract test depends on this list)', () => {
     expect(NOTIF_TYPES).toEqual([
       'REQUEST_NEW',
       'REQUEST_ACCEPTED',
@@ -36,6 +36,7 @@ describe('NotifTypeSchema', () => {
       'PROPERTY_VERIFIED',
       'PROPERTY_REJECTED',
       'PRICE_CHANGED',
+      'VERIFICATION_INFO_REQUESTED',
     ]);
   });
 });

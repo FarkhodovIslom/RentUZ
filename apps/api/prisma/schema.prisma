@@ -78,6 +78,7 @@ enum NotifType {
   PROPERTY_VERIFIED
   PROPERTY_REJECTED
   PRICE_CHANGED
+  VERIFICATION_INFO_REQUESTED
 }
 
 enum ReportStatus {
@@ -97,6 +98,7 @@ enum ReportPriority {
   LOW
   MEDIUM
   HIGH
+  CRITICAL
 }
 
 enum OtpPurpose {
@@ -238,6 +240,9 @@ model properties {
   region          locations?     @relation(fields: [regionId], references: [id])
   amenities       Json           @db.JsonB
   status          PropertyStatus @default(DRAFT)
+  /// TS-level union 'OWNER_SUSPENDED' | 'ADMIN' | 'OWNER' | null — no PG enum
+  /// (7_Phase.md §5: activation restores only OWNER_SUSPENDED-paused rows).
+  pausedReason    String?       @db.Text
   isVerified      Boolean        @default(false)
   verifiedAt      DateTime?      @db.Timestamptz(6)
   verifiedBy      String?        @db.Uuid

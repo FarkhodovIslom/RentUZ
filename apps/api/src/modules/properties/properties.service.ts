@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { EventBusService } from '../../common/services/event-bus.service.js';
+import { FeatureFlagsService } from '../../common/services/feature-flags.service.js';
 import { FxService } from '../fx/fx.service.js';
 import { SearchCacheService } from '../search/search-cache.service.js';
 import { GeoRepository } from './geo.repository.js';
@@ -44,6 +45,7 @@ export class PropertiesService {
     private readonly fx: FxService,
     private readonly searchCache: SearchCacheService,
     private readonly events: EventBusService,
+    private readonly flags: FeatureFlagsService,
   ) {}
 
   async createDraft(ownerId: string): Promise<{ id: string }> {
@@ -161,7 +163,9 @@ export class PropertiesService {
     }
     this.status.assert(prop.status, 'PENDING_VERIFICATION');
 
-    const autoApprove = process.env.AUTO_APPROVE_LISTINGS === 'true';
+    // AUTO_APPROVE_LISTINGS reads the runtime flag (§5 restart-free overrides;
+    // production is hard-false in FeatureFlagsService).
+    const autoApprove = (await this.flags.get('AUTO_APPROVE_LISTINGS')) === true;
     const nextStatus = autoApprove ? 'ACTIVE' : 'PENDING_VERIFICATION';
     if (autoApprove) this.status.assert(prop.status, 'ACTIVE');
 
@@ -254,7 +258,9 @@ export class PropertiesService {
     this.status.assert(prop.status, to);
     const result = await this.prisma.properties.update({
       where: { id: propertyId },
-      data: { status: to },
+      // Owner pause/resume writes pausedReason='OWNER' (Phase 7 §5: admin
+      // activation must only restore OWNER_SUSPENDED-paused rows).
+      data: { status: to, pausedReason: to === 'PAUSED' ? 'OWNER' : null },
       select: { status: true },
     });
     await this.searchCache.bumpVersion();

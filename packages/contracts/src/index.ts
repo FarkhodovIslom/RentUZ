@@ -9,3 +9,5 @@ export * from './rental-requests.js';
 export * from './tz.js';
 export * from './notifications.js';
 export * from './analytics.js';
+export * from './reports.js';
+export * from './admin.js';

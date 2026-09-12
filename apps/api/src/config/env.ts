@@ -63,6 +63,8 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().default(''),
 
   ADMIN_PHONE: z.string().default('+998901234567'),
+  // Second seeded admin (Phase 7 E2E "two admin contexts"); same password.
+  ADMIN2_PHONE: z.string().default('+998901234568'),
   ADMIN_INITIAL_PASSWORD: z.string().default(''),
 });
 

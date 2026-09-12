@@ -41,7 +41,7 @@ An admin can sign in to `/admin`, see the dashboard with platform-wide KPIs, wal
    - `POST /admin/verification/:id/approve` — `@Audit('PROPERTY_APPROVED')`
    - `POST /admin/verification/:id/reject` — `@Audit('PROPERTY_REJECTED')` — body: `{ reason: string }`
    - `POST /admin/verification/:id/request-info` — `@Audit('VERIFICATION_INFO_REQUESTED')` — body: `{ message: string }`
-   - `POST /admin/verification/:id/claim` — `status: PENDING → REVIEWING` (admin takes ownership of the row). Not audited beyond a soft log.
+    - `POST /admin/verification/:id/claim` — `status: PENDING → REVIEWING`. **Implementation note**: REVIEWING is a *soft* claim held in Redis (`verification:claim:<id>`, TTL 7 d, JSON `{adminId, adminName, at}`) — no `PropertyStatus` value is added and no audit row is written. The queue's `REVIEWING` tab filters claimed `PENDING_VERIFICATION` rows; `PENDING` filters unclaimed.
 8. **Suspended owner check** in `approve`: if owner is SUSPENDED, 409 `OWNER_SUSPENDED` and no state change. (Spec §54.)
 
 ### 1.3 Reports / moderation (§61)
@@ -91,7 +91,7 @@ An admin can sign in to `/admin`, see the dashboard with platform-wide KPIs, wal
 22. `apps/web/src/app/(admin)/admin/analytics/page.tsx` — same chart components as the owner analytics page but at the platform level.
 23. `apps/web/src/app/(admin)/admin/settings/page.tsx`:
     - Tabs: Feature flags, Audit log, Jobs
-    - **Feature flags**: read/write `AUTO_APPROVE_LISTINGS`, `AUTH_OTP_DEV_MODE` (with a "do not enable in production" warning), `CHAT_ATTACHMENT_TTL_DAYS`, `NOTIFICATIONS_*` TTLs
+    - **Feature flags**: read/write `AUTO_APPROVE_LISTINGS`, `AUTH_OTP_DEV_MODE` (with a "do not enable in production" warning), `CHAT_ATTACHMENT_TTL_DAYS`, `NOTIFICATIONS_*_RETENTION_DAYS`
     - **Audit log**: filtered, cursor-paginated list of `auditLogs`
     - **Jobs**: list of BullMQ queues with last 20 runs and next schedule
 
@@ -126,16 +126,26 @@ An admin can sign in to `/admin`, see the dashboard with platform-wide KPIs, wal
       AUTO_APPROVE_LISTINGS: z.boolean().optional(),
       AUTH_OTP_DEV_MODE: z.boolean().optional(),
       CHAT_ATTACHMENT_TTL_DAYS: z.number().int().min(1).max(365).optional(),
-      NOTIFICATIONS_READ_TTL_DAYS: z.number().int().min(1).max(365).optional(),
-      NOTIFICATIONS_UNREAD_TTL_DAYS: z.number().int().min(1).max(365).optional(),
+      NOTIFICATIONS_READ_RETENTION_DAYS: z.number().int().min(1).max(3650).optional(),
+      NOTIFICATIONS_UNREAD_RETENTION_DAYS: z.number().int().min(1).max(3650).optional(),
     });
     ```
+    > **Name reconciliation (2026-09-12)**: the original `NOTIFICATIONS_*_TTL_DAYS`
+    > names above were stale — Phase 6 shipped `NOTIFICATIONS_READ_RETENTION_DAYS`
+    > / `NOTIFICATIONS_UNREAD_RETENTION_DAYS` (env.ts + cleanup processor). The
+    > contracts use the shipped names (AGENTS.md: docs reconciled first).
+    `CHAT_ATTACHMENT_TTL_DAYS` is registered with a lazy env default (30) so this
+    branch boots before Phase 5's merge introduces the var.
 
 ---
 
 ## 2. Database changes
-- **No new tables.** New migration: `ALTER TYPE report_priority ADD VALUE 'CRITICAL';` (not in Phase 1, added now since `ESCALATED` uses it).
-- Add `CREATE INDEX reports_target_idx ON reports ("targetType","targetId","status");` to support the dedup check and the per-target reports list.
+- **No new tables.** Migration `20260912180000_phase7_admin_moderation` (hand-written SQL, `SET search_path = public, extensions;` first):
+  - `ALTER TYPE "ReportPriority" ADD VALUE IF NOT EXISTS 'CRITICAL';` (not in Phase 1; `ESCALATED` uses it).
+  - `ALTER TYPE "NotifType" ADD VALUE IF NOT EXISTS 'VERIFICATION_INFO_REQUESTED';` (the new `verification.info_requested` event; Phase 6 trap: raw casts are quoted camelCase `::"NotifType"`).
+  - `ALTER TABLE "properties" ADD COLUMN "pausedReason" TEXT;` — TS-level union `'OWNER_SUSPENDED' | 'ADMIN' | 'OWNER' | null`, not a PG enum.
+  - `CREATE INDEX IF NOT EXISTS "reports_target_idx" ON "reports" ("targetType","targetId","status");` — dedup check + per-target list.
+- `schema.prisma` synced for all four deltas; no new tables.
 
 ---
 
@@ -182,3 +192,24 @@ Web E2E (Playwright, two admin contexts):
 - **Settings page mutations** — feature flags hit process-level env at runtime via a `ConfigService` wrapper that supports a Redis-backed override layer. The override layer is **read on every request** (1 ms), with a 5 s in-process cache. The Redis keyspace is `flags:runtime:*`. No restart needed.
 - **Report reason set is fixed** — the spec lists 7 reasons; we use that set exactly. Adding reasons is a schema change (new enum value) and an i18n update.
 - **Reactivation side-effects** — activating a user only restores properties that were `PAUSED` *because of* the suspension. We track this with a `properties.pausedReason` column added in a new migration: `'OWNER_SUSPENDED' | 'ADMIN' | 'OWNER'`. On suspension, set to `OWNER_SUSPENDED`; on activation, set to `ACTIVE` only for those rows.
+
+---
+
+## 6. Implementation status — ✅ complete (2026-09-12)
+
+Built in a parallel git worktree (`/Users/farkhodov/Desktop/RentUZ-phase7`, branch `feature/phase-7-admin-moderation` off `feature/phase-6-notifications-analytics`) with an isolated docker stack — `docker-compose.phase7.yml`, PostGIS :5436 / Redis :6381 / MinIO :9210–9211.
+
+- §1: all modules/paths shipped — `admin/` (analytics, requests, audit, flags), `verification/` (queue/get/claim/approve/reject/request-info), `reports/` (public create + admin resolve/escalate), `admin-users/` (list/get/status/bulk), `admin-properties/`; web `(admin)` shell + 9 pages, `ConfirmModal`, drawers, `VerificationReview` (A/R/I + arrows), `ReportReview`, `use-admin` hooks, `uz.json` `admin.*` + navbar/bottomnav admin links, `/forbidden`.
+- §2: one migration, four deltas (see above); `prisma migrate` verified.
+- §3: unit — API 102, contracts 65 (incl. `admin.test.ts` / `reports.test.ts` and both i18n contract tests); integration — `admin-moderation.integration.test.ts` **16/16** on the phase-7 stack; E2E — `admin-moderation.spec.ts` **3/3** (and the full E2E suite 14/14).
+- §4 DoD: `AUTO_APPROVE_LISTINGS` / `AUTH_OTP_DEV_MODE` are settable from the settings page; the env startup assertions in `env.ts` remain authoritative at boot and the runtime layer hard-clamps both to `false` in production (below).
+
+### Decisions & deviations
+- **Runtime flags** are a `FeatureFlagsService` (`common/services/feature-flags.service.ts`, `@Global`): Redis `flags:runtime:<NAME>` override + env default + 5 s in-process cache. The read sites moved here: `properties.submit` (`AUTO_APPROVE_LISTINGS`), `auth.issueOtp` (`AUTH_OTP_DEV_MODE`), `notifications-cleanup` (`NOTIFICATIONS_*_RETENTION_DAYS`). **Prod hard-guard**: a Redis override must not bypass the boot assertions, so both dev flags read `false` in production and `PATCH /admin/flags` refuses `true` with 409.
+- **REVIEWING is a Redis soft claim** (`verification:claim:<id>`), not a `PropertyStatus` — the public status machine stays locked; `REVIEWING` queue pagination is in-memory at MVP volume.
+- **`@Audit` supports a body-derived action** (e.g. `REPORT_${body.action}`) so `PATCH /admin/reports/:id` maps RESOLVED/REJECTED/ESCALATED to three audit action names from one route.
+- **Audit `targetId` fallback** `response.data.id → req.params.id → adminId` (`auditLogs.targetId` is NOT NULL uuid; SETTINGS/bulk rows self-target the acting admin). `adminId` is always the JWT subject (security test asserts it ignores a body `adminId`).
+- **Second seeded admin** (`ADMIN2_PHONE`, default `+998901234568`, same `ADMIN_INITIAL_PASSWORD`) — there is no API to mint admins and the E2E needs two admin contexts.
+- **Audit row count in the reverse-chrono integration test is exactly 5** — the `POST /reports` create is intentionally *not* audited (user action, not an admin mutation).
+- **Known env caveat**: the repo's `prisma/seed.ts` expects `locations` to pre-exist (Phase 1 seed); on a fresh DB run the Phase-1 seed's location data or copy it in before `db:seed` (pre-existing repo quirk, unchanged by Phase 7).
+- **Pre-existing integration flakiness**: the phase-6 `notifications-analytics` rollup test can fail on the Tashkent midnight boundary (`expected 29 to be 30`), and rare `TRUNCATE` deadlocks under Colima appear across suites; the Phase 7 suite is green in isolation and in the full run.

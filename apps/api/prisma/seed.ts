@@ -120,24 +120,29 @@ const ADDRESSES = [
 async function main(): Promise<void> {
   console.log('seed: starting');
 
-  // 1. Admin (only if not exists).
+  // 1. Admins (only if not exists). The second admin backs the Phase 7 E2E
+  // "two admin contexts" spec — same ADMIN_INITIAL_PASSWORD.
   const adminPhone = process.env.ADMIN_PHONE ?? '+998901234567';
+  const admin2Phone = process.env.ADMIN2_PHONE ?? '+998901234568';
   const adminPassword = process.env.ADMIN_INITIAL_PASSWORD ?? 'admin-phase1-test';
   const adminHash = await argonHash(adminPassword);
-  await prisma.users.upsert({
-    where: { phone: adminPhone },
-    update: { role: 'ADMIN', isPhoneVerified: true, canListProperties: true },
-    create: {
-      name: 'RentUZ Admin',
-      phone: adminPhone,
-      passwordHash: adminHash,
-      role: 'ADMIN',
-      status: 'ACTIVE',
-      isPhoneVerified: true,
-      canListProperties: true,
-    },
-  });
-  console.log('  admin upserted');
+  const adminUpserts = [adminPhone, admin2Phone].map((phone) =>
+    prisma.users.upsert({
+      where: { phone },
+      update: { role: 'ADMIN', isPhoneVerified: true, canListProperties: true },
+      create: {
+        name: 'RentUZ Admin',
+        phone,
+        passwordHash: adminHash,
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        isPhoneVerified: true,
+        canListProperties: true,
+      },
+    }),
+  );
+  await Promise.all(adminUpserts);
+  console.log('  admins upserted');
 
   // 2. Owners (8).
   const ownerIds: string[] = [];

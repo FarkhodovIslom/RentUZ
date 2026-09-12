@@ -14,7 +14,8 @@
     "profile": "Profil",
     "login": "Kirish",
     "requests": "So'rovlar",
-    "notifications": "Bildirishnomalar"
+    "notifications": "Bildirishnomalar",
+    "admin": "Admin"
   },
   "home": {
     "badge": "O'zbekistonning zamonaviy ijara bozori",
@@ -405,7 +406,8 @@
       "newMessage": "Yangi xabar",
       "propertyVerified": "E'lon tasdiqlandi",
       "propertyRejected": "E'lon rad etildi",
-      "priceChanged": "Narx o'zgardi"
+      "priceChanged": "Narx o'zgardi",
+      "verificationInfoRequested": "Qo'shimcha ma'lumot so'raldi"
     },
     "bodies": {
       "request": {
@@ -425,7 +427,253 @@
       },
       "price": {
         "changed": "\"{property}\" e'loni narxi {oldPrice} dan {newPrice} ga o'zgardi"
+      },
+      "verification": {
+        "infoRequested": "\"{property}\" e'loni bo'yicha qo'shimcha ma'lumot so'raldi: {message}"
       }
+    }
+  },
+  "admin": {
+    "sidebar": {
+      "overview": "Umumiy",
+      "users": "Foydalanuvchilar",
+      "properties": "E'lonlar",
+      "verification": "Tekshiruv",
+      "reports": "Shikoyatlar",
+      "requests": "So'rovlar",
+      "analytics": "Analitika",
+      "settings": "Sozlamalar"
+    },
+    "dashboard": {
+      "title": "Admin panel",
+      "totalUsers": "Jami foydalanuvchilar",
+      "activeUsers": "Faol foydalanuvchilar",
+      "totalProperties": "Jami e'lonlar",
+      "activeProperties": "Faol e'lonlar",
+      "pendingVerification": "Tekshiruvda",
+      "openReports": "Ochiq shikoyatlar",
+      "rentalRequests": "So'rovlar (davr)",
+      "revenue": "Daromad (MVP: 0)",
+      "growth": "O'sish (30 kun)",
+      "growthNewUsers": "Yangi foydalanuvchilar",
+      "growthNewProperties": "Yangi e'lonlar",
+      "growthRequests": "So'rovlar",
+      "recentUsers": "Oxirgi foydalanuvchilar",
+      "recentProperties": "Oxirgi e'lonlar",
+      "empty": "Ma'lumot yo'q"
+    },
+    "users": {
+      "title": "Foydalanuvchilar",
+      "search": "Ism, telefon yoki email bo'yicha qidirish",
+      "role": "Rol",
+      "status": "Holat",
+      "createdFrom": "Ro'yxatdan o'tgan (dan)",
+      "createdTo": "Ro'yxatdan o'tgan (gacha)",
+      "filter": "Filtr",
+      "empty": "Foydalanuvchi topilmadi",
+      "memberSince": "A'zo: {date}",
+      "stats": {
+        "properties": "E'lonlar",
+        "activeProperties": "Faol e'lonlar",
+        "requestsAsTenant": "Yuborgan so'rovlari",
+        "reportsAgainst": "Shikoyatlar"
+      },
+      "actions": {
+        "suspend": "To'xtatish",
+        "activate": "Faollashtirish",
+        "delete": "O'chirish"
+      },
+      "suspendWarning": "Diqqat: {count} ta faol e'lon to'xtatiladi va sessiyalar bekor qilinadi",
+      "bulkSuspend": "Ko'p foydalanuvchini to'xtatish",
+      "role_ADMIN": "Admin",
+      "role_USER": "Foydalanuvchi",
+      "status_ACTIVE": "Faol",
+      "status_SUSPENDED": "To'xtatilgan",
+      "status_DELETED": "O'chirilgan"
+    },
+    "properties": {
+      "title": "E'lonlar",
+      "search": "Sarlavha, slug yoki manzil",
+      "type": "Turi",
+      "status": "Holat",
+      "verification": "Tekshiruv",
+      "owner": "Egasi",
+      "empty": "E'lon topilmadi",
+      "views": "Ko'rishlar",
+      "actions": {
+        "pause": "To'xtatish",
+        "resume": "Qayta faollashtirish",
+        "reject": "Rad etish",
+        "delete": "O'chirish"
+      },
+      "pausedReason": {
+        "OWNER_SUSPENDED": "Egasi to'xtatilgan",
+        "ADMIN": "Admin to'xtatgan",
+        "OWNER": "Egasi to'xtatgan"
+      },
+      "status_DRAFT": "Qoralama",
+      "status_PENDING_VERIFICATION": "Tekshiruvda",
+      "status_ACTIVE": "Faol",
+      "status_PAUSED": "To'xtatilgan",
+      "status_RENTED": "Ijaraga berilgan",
+      "status_REJECTED": "Rad etilgan",
+      "status_DELETED": "O'chirilgan"
+    },
+    "verification": {
+      "title": "Tekshiruv navbati",
+      "tabs": {
+        "PENDING": "Kutishda",
+        "REVIEWING": "Ko'rilmoqda",
+        "APPROVED": "Tasdiqlangan",
+        "REJECTED": "Rad etilgan"
+      },
+      "empty": "Navbat bo'sh",
+      "claim": "Olish",
+      "claimedBy": "Oldi: {name}",
+      "approve": "Tasdiqlash",
+      "reject": "Rad etish",
+      "requestInfo": "Ma'lumot so'rash",
+      "ownerCard": "Egasi",
+      "priorViolations": "Oldingi qoidabuzarliklar",
+      "totalListings": "Jami e'lonlar",
+      "memberSince": "A'zo bo'lgan",
+      "priceSnapshot": "Narx",
+      "checklistTitle": "Tekshiruv ro'yxati",
+      "checklist": {
+        "locationMatches": "Joylashuv tavsifga mos",
+        "priceInRange": "Narx bozorga mos",
+        "imagesClear": "Rasmlar tushunarli",
+        "ownerVerifiable": "Egasi tekshiriladigan",
+        "noDuplicates": "Nusxa emas"
+      },
+      "shortcuts": "Tezkor tugmalar: A — tasdiqlash, R — rad etish, I — ma'lumot so'rash, ←/→ — navbat",
+      "checklistRequired": "Kamida barcha bandlarni belgilang"
+    },
+    "reports": {
+      "title": "Shikoyatlar",
+      "priority": "Muhimlik",
+      "status": "Holat",
+      "targetType": "Maqsad",
+      "empty": "Shikoyat yo'q",
+      "reporter": "Shikoyatchi",
+      "target": "Maqsad",
+      "reason": "Sabab",
+      "description": "Izoh",
+      "evidence": "Dalillar",
+      "resolve": "Hal qilish",
+      "reject": "Rad etish",
+      "escalate": "Kritik qilish",
+      "suspendTarget": "Maqsad egasini to'xtatish",
+      "removeListing": "E'lonni o'chirish",
+      "resolutionNote": "Yechim izohi",
+      "priority_LOW": "Past",
+      "priority_MEDIUM": "O'rtacha",
+      "priority_HIGH": "Yuqori",
+      "priority_CRITICAL": "Kritik",
+      "status_OPEN": "Ochiq",
+      "status_REVIEWING": "Ko'rilmoqda",
+      "status_RESOLVED": "Hal qilingan",
+      "status_REJECTED": "Rad etilgan",
+      "targetType_USER": "Foydalanuvchi",
+      "targetType_PROPERTY": "E'lon",
+      "targetType_MESSAGE": "Xabar",
+      "reasons": {
+        "FAKE": "Yolg'on e'lon",
+        "WRONG_PRICE": "Narx noto'g'ri",
+        "WRONG_LOCATION": "Joylashuv noto'g'ri",
+        "SCAM": "Firibgarlik",
+        "DUPLICATE": "Nusxa",
+        "INAPPROPRIATE": "Nomaqbul kontent",
+        "OTHER": "Boshqa"
+      }
+    },
+    "requests": {
+      "title": "Ijara so'rovlari",
+      "empty": "So'rov yo'q",
+      "tenant": "Ijara oluvchi",
+      "owner": "Egasi",
+      "property": "E'lon",
+      "duration": "Muddat",
+      "startDate": "Boshlanish",
+      "readOnly": "Faqat o'qish uchun"
+    },
+    "analytics": {
+      "title": "Platforma analitikasi",
+      "range": {
+        "7d": "7 kun",
+        "30d": "30 kun",
+        "90d": "90 kun"
+      },
+      "series": "Dinamika",
+      "legend": {
+        "newUsers": "Yangi foydalanuvchilar",
+        "newProperties": "Yangi e'lonlar",
+        "requests": "So'rovlar"
+      }
+    },
+    "settings": {
+      "title": "Sozlamalar",
+      "tabs": {
+        "flags": "Feature flaglar",
+        "audit": "Audit jurnali",
+        "jobs": "Vazifalar"
+      },
+      "flags": {
+        "description": "Ish vaqtida o'zgartiriladi (Redis override) — restart kerak emas",
+        "AUTO_APPROVE_LISTINGS": "E'lonlarni avto-tasdiqlash (dev)",
+        "AUTH_OTP_DEV_MODE": "OTP dev rejimi (dev)",
+        "CHAT_ATTACHMENT_TTL_DAYS": "Chat ilova TTL (kun)",
+        "NOTIFICATIONS_READ_RETENTION_DAYS": "O'qilgan bildirishnomalar saqlanishi (kun)",
+        "NOTIFICATIONS_UNREAD_RETENTION_DAYS": "O'qilmagan bildirishnomalar saqlanishi (kun)",
+        "productionWarning": "Ishlab chiqarishda bu flaglar qat'iy o'chirilgan va yoqib bo'lmaydi",
+        "source_override": "Redis override",
+        "source_env-default": "Env standarti",
+        "save": "Saqlash"
+      },
+      "audit": {
+        "description": "Admin amallari tarixi (yangi → eski)",
+        "admin": "Admin",
+        "action": "Amal",
+        "target": "Maqsad",
+        "metadata": "Metadata",
+        "empty": "Yozuv yo'q",
+        "loadMore": "Yana yuklash"
+      },
+      "jobs": {
+        "description": "BullMQ navbatlari: oxirgi ishga tushishlar va keyingi jadval",
+        "queue": "Navbat",
+        "runs": "Ishga tushishlar",
+        "nextRun": "Keyingi",
+        "empty": "Navbat topilmadi"
+      }
+    },
+    "audit": {
+      "actions": {
+        "PROPERTY_APPROVED": "E'lon tasdiqlandi",
+        "PROPERTY_REJECTED": "E'lon rad etildi",
+        "VERIFICATION_INFO_REQUESTED": "Qo'shimcha ma'lumot so'raldi",
+        "REPORT_RESOLVED": "Shikoyat hal qilindi",
+        "REPORT_REJECTED": "Shikoyat rad etildi",
+        "REPORT_ESCALATED": "Shikoyat kritik qilindi",
+        "USER_SUSPENDED": "Foydalanuvchi to'xtatildi",
+        "USER_ACTIVATED": "Foydalanuvchi faollashtirildi",
+        "USER_DELETED": "Foydalanuvchi o'chirildi",
+        "USER_BULK_SUSPENDED": "Ko'p foydalanuvchi to'xtatildi",
+        "PROPERTY_PAUSED": "E'lon to'xtatildi",
+        "PROPERTY_RESUMED": "E'lon qayta faollashtirildi",
+        "PROPERTY_DELETED": "E'lon o'chirildi",
+        "FLAGS_UPDATED": "Flaglar yangilandi"
+      }
+    },
+    "common": {
+      "confirm": "Tasdiqlash",
+      "cancel": "Bekor qilish",
+      "reasonLabel": "Izoh (majburiy, kamida 10 belgi)",
+      "messageLabel": "Xabar (majburiy, kamida 10 belgi)",
+      "loading": "Yuklanmoqda...",
+      "error": "Xatolik yuz berdi",
+      "openProperty": "E'lonni ko'rish",
+      "close": "Yopish"
     }
   }
 }

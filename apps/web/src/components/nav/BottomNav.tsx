@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { getSession } from '@/lib/session';
 
 const ITEMS = [
   { href: '/', key: 'home' },
@@ -12,13 +13,15 @@ const ITEMS = [
 /** Mobile bottom navigation — spec §6 (6 items, 44px+ touch targets). */
 export async function BottomNav() {
   const t = await getTranslations('nav');
+  const session = await getSession();
+  const items = session?.role === 'ADMIN' ? [...ITEMS, { href: '/admin', key: 'admin' } as const] : ITEMS;
 
   return (
     <nav
       aria-label="Asosiy navigatsiya"
-      className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-border bg-card md:hidden"
+      className={`fixed inset-x-0 bottom-0 z-50 ${items.length > 6 ? 'grid-cols-7' : 'grid-cols-6'} grid border-t border-border bg-card md:hidden`}
     >
-      {ITEMS.map((item) => (
+      {items.map((item) => (
         <a
           key={item.href}
           href={item.href}

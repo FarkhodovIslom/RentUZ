@@ -1,6 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { PropertyUpdateInput, type PropertyUpdateInputT, type PropertyDetailDTOT } from '@rentuz/contracts';
+import {
+  PropertyUpdateInput,
+  PropertyPriceChangeInput,
+  type PropertyUpdateInputT,
+  type PropertyDetailDTOT,
+  type PropertyPriceChangeInputT,
+} from '@rentuz/contracts';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator.js';
 import { PropertiesService } from './properties.service.js';
 
@@ -54,5 +60,15 @@ export class PropertiesController {
   @HttpCode(200)
   resume(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.properties.resume(id, user.id);
+  }
+
+  /** §84 — published price change; enqueues PRICE_CHANGED to favoriting users. */
+  @Patch(':id/price')
+  changePrice(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body({ schema: PropertyPriceChangeInput }) body: PropertyPriceChangeInputT,
+  ) {
+    return this.properties.changePrice(id, user.id, body);
   }
 }

@@ -66,6 +66,12 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('debug'),
   SENTRY_DSN: z.string().default(''),
 
+  // Phase 8 (8_Phase.md §1.1 item 4): the web app's ISR revalidation hook.
+  // Empty WEB_INTERNAL_URL disables the calls (dev default — local Next
+  // revalidates on its 10-min window anyway).
+  WEB_INTERNAL_URL: z.string().default(''),
+  REVALIDATE_SECRET: z.string().default(''),
+
   ADMIN_PHONE: z.string().default('+998901234567'),
   // Second seeded admin (Phase 7 E2E "two admin contexts"); same password.
   ADMIN2_PHONE: z.string().default('+998901234568'),

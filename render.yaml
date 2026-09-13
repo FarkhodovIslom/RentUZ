@@ -1,0 +1,70 @@
+# Render Blueprint — RentUZ API (8_Phase.md §1.6 item 37).
+#
+# Applied via the Render dashboard (Blueprint → New; the repo root is the
+# context). The service runs the Nest API in `apps/api` with the SWC build
+# (0_Phase.md §1 trap 5 — @nestjs/cli is broken on Node 22; `pnpm turbo
+# build --filter=api...` compiles src/ to dist/ ESM with decorator metadata).
+#
+# Env values live in the Render dashboard (secret files / env groups) — this
+# blueprint wires the non-secret shape and the health check path (/ready,
+# §72). Starter tier is REQUIRED in production (free sleeps — 7_Phase risk).
+services:
+  - type: web
+    name: rentuz-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    rootDir: apps/api
+    buildCommand: pnpm turbo build --filter=api...
+    startCommand: node dist/main.js
+    healthCheckPath: /ready
+    autoDeploy: true
+    branch: main
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/**
+        - pnpm-lock.yaml
+    envVars:
+      # Secret values are set in the Render dashboard (§74 — never in git).
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_DIRECT_URL
+        sync: false
+      - key: REDIS_URL
+        # Render's managed Redis or the app's own Redis instance — provision
+        # separately and paste the internal URL here.
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: SOCKET_TICKET_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: PUBLIC_STORAGE_BASE_URL
+        sync: false
+      - key: SMS_PROVIDER
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: WEB_INTERNAL_URL
+        # Vercel's deployment URL — enables the ISR revalidation hook.
+        sync: false
+      - key: REVALIDATE_SECRET
+        sync: false
+      # Production asserts (AGENTS.md): both must be false — set in the
+      # dashboard; listed here so the blueprint documents them.
+      - key: AUTH_OTP_DEV_MODE
+        value: "false"
+      - key: AUTO_APPROVE_LISTINGS
+        value: "false"

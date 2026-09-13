@@ -9,13 +9,16 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test e2e/a11y.spec.ts",
+    "size-check": "node scripts/size-check.mjs"
   },
   "dependencies": {
     "@date-fns/tz": "1.2.0",
     "@hookform/resolvers": "5.9.1",
     "@rentuz/contracts": "workspace:*",
     "@rentuz/ui": "workspace:*",
+    "@sentry/nextjs": "10.74.0",
     "@tanstack/react-query": "5.102.8",
     "@vis.gl/react-maplibre": "8.1.3",
     "date-fns": "4.4.0",
@@ -31,6 +34,7 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@playwright/test": "1.63.0",
     "@rentuz/config": "workspace:^",
     "@tailwindcss/postcss": "4.3.3",

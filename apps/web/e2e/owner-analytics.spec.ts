@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { request as pwRequest } from '@playwright/test';
-import { loginBrowser, provisionProperty, provisionUser, submitRequest } from './helpers';
+import { loginBrowser, provisionProperty, provisionUser, submitRequest, csrfHeaders } from './helpers';
 
 /**
  * Phase 6 E2E: owner analytics renders live-aggregated data (custom range —
@@ -20,14 +20,16 @@ test('owner analytics: views + requests show up, insights render, range switch i
   // A pending + one accepted request today → live overview requests/conversion.
   const tenant = await provisionUser();
   const tApi = await pwRequest.newContext({ baseURL: 'http://localhost:3000' });
+  const csrf = await csrfHeaders(tApi);
   const tenantLogin = await tApi.post('/api/v1/auth/login', {
+    headers: csrf,
     data: { phone: tenant.phone, password: tenant.password },
   });
   const tenantToken = (await tenantLogin.json()).data.accessToken as string;
   const accepted = await submitRequest(tenantToken, id);
   await submitRequest(tenantToken, id).catch(() => undefined); // 2nd pending may conflict (dup rule)
   await tApi.patch(`/api/v1/rental-requests/${accepted.id}`, {
-    headers: { Authorization: `Bearer ${ownerToken}` },
+    headers: { Authorization: `Bearer ${ownerToken}`, ...csrf },
     data: { status: 'ACCEPTED' },
   });
   await tApi.dispose();

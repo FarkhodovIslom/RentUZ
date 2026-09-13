@@ -14,6 +14,7 @@ import { RateLimiterRedis } from 'rate-limiter-flexible';
 import { SendMessageInput } from '@rentuz/contracts';
 import { EventBusService } from '../../common/services/event-bus.service.js';
 import { RedisService } from '../../redis/redis.service.js';
+import { MetricsController } from '../../health/metrics.controller.js';
 import { ConversationsService } from '../conversations/conversations.service.js';
 import { MessagesService } from '../conversations/messages.service.js';
 import { SocketTicketService } from './socket-ticket.service.js';
@@ -78,7 +79,11 @@ export class RealtimeGateway
     private readonly messages: MessagesService,
     private readonly events: EventBusService,
     private readonly redisService: RedisService,
-  ) {}
+    private readonly metrics: MetricsController,
+  ) {
+    // §72 gauge: live WS connections (scraper alert on unusual growth).
+    this.metrics.wsConnections.set(0);
+  }
 
   @WebSocketServer()
   server!: Server;
@@ -121,6 +126,7 @@ export class RealtimeGateway
       socket.disconnect(true);
       return;
     }
+    this.metrics.wsConnections.inc(1);
     let userId: string;
     try {
       userId = await this.tickets.consume(ticket);
@@ -164,6 +170,7 @@ export class RealtimeGateway
     const heartbeat = this.heartbeats.get(socket.id);
     if (heartbeat) clearInterval(heartbeat);
     this.heartbeats.delete(socket.id);
+    this.metrics.wsConnections.dec(1);
     if (!userId) return;
 
     this.untrackSocket(socket.id, userId);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePathname, useRouter } from 'next/navigation';
@@ -40,6 +40,20 @@ export function RentalRequestModal({
   variant = 'full',
 }: RentalRequestModalProps) {
   const [open, setOpen] = useState(false);
+  const openerRef = useRef<HTMLButtonElement>(null);
+
+  // §7 keyboard: Esc closes and focus returns to the opener (8_Phase.md §1.2).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        openerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
   const [sent, setSent] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -85,6 +99,7 @@ export function RentalRequestModal({
   const opener =
     variant === 'compact' ? (
       <button
+        ref={openerRef}
         type="button"
         onClick={() => setOpen(true)}
         className="inline-flex h-10 items-center rounded-[12px] border border-border px-3 text-sm font-medium"
@@ -93,6 +108,7 @@ export function RentalRequestModal({
       </button>
     ) : (
       <button
+        ref={openerRef}
         type="button"
         onClick={() => setOpen(true)}
         className="inline-flex h-11 flex-1 items-center justify-center rounded-[12px] border border-border px-4 text-sm font-medium hover:border-primary"

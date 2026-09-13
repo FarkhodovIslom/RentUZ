@@ -43,6 +43,16 @@ export class ImageService {
     if (!detectedMime) {
       throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Fayl formati qo‘llab-quvvatlanmaydi (JPEG/PNG/WebP)' });
     }
+    // §94 polyglot defense (Phase 8): sharp tolerates trailing bytes after
+    // the JPEG EOI marker — a "JPEG" with an appended script tail decodes
+    // fine, but the original file passes content scanners as a polyglot.
+    // Reject any JPEG whose last two bytes are not the EOI marker.
+    if (detectedMime === 'image/jpeg' && (buffer[buffer.length - 2] !== 0xff || buffer[buffer.length - 1] !== 0xd9)) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Faylda rasm ma’lumotidan keyin qo‘shimcha baytlar bor (JPEG/JS polyglot)',
+      });
+    }
 
     // .rotate() applies EXIF orientation; .withMetadata({ exif: {} }) drops it.
     const pipeline = sharp(buffer, { failOn: 'truncated' })
@@ -79,7 +89,7 @@ export class ImageService {
   }
 }
 
-function detectMime(buffer: Buffer): string | null {
+export function detectMime(buffer: Buffer): string | null {
   for (const sniffer of MAGIC_BYTE_SNIFFERS) {
     if (buffer.length < sniffer.bytes.length) continue;
     let ok = true;

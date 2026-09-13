@@ -3,11 +3,10 @@ import { FavoritesBadge } from '@/components/favorites/FavoritesBadge';
 import { ChatBadge } from '@/components/chat/ChatBadge';
 import { RequestsBadge } from '@/components/rentals/RequestsBadge';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { getSession } from '@/lib/session';
+import { AdminNavLink } from '@/components/nav/AdminNavLink';
 
 export async function Navbar() {
   const t = await getTranslations('nav');
-  const session = await getSession();
 
   const loginClass =
     'inline-flex h-9 items-center rounded-[12px] bg-primary px-3 text-sm font-medium text-black hover:bg-primary-hover';
@@ -37,11 +36,7 @@ export async function Navbar() {
             {t('chat')}
             <ChatBadge />
           </a>
-          {session?.role === 'ADMIN' ? (
-            <a href="/admin" className="font-medium text-primary hover:text-primary-hover" data-testid="nav-admin-link">
-              {t('admin')}
-            </a>
-          ) : null}
+          <AdminNavLink label={t('admin')} />
         </nav>
         <div className="flex items-center gap-3">
           <NotificationBell />

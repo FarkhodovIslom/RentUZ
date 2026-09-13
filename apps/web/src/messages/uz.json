@@ -145,7 +145,8 @@
     "unauthorized": "Avval tizimga kiring",
     "forbidden": "Sizda bu amal uchun ruxsat yo'q",
     "rateLimited": "Juda ko'p urinish. Bir oz kutib turing",
-    "validation": "Ma'lumotlarda xatolik bor"
+    "validation": "Ma'lumotlarda xatolik bor",
+    "forbiddenDescription": "Bu sahifaga kirish huquqingiz yo‘q."
   },
   "verification": {
     "banner": {
@@ -700,5 +701,11 @@
       "openProperty": "E'lonni ko'rish",
       "close": "Yopish"
     }
+  },
+  "cookies": {
+    "bannerLabel": "Cookie bildirishnomasi",
+    "text": "Biz faqat zarur cookie'lardan foydalanamiz — kirish sessiyasi uchun.",
+    "privacy": "Maxfiylik siyosati",
+    "dismiss": "Tushunarli"
   }
 }

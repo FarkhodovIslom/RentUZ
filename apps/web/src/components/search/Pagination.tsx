@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import type { KeyboardEvent } from 'react';
+import { useRef } from 'react';
 
 interface PaginationProps {
   page: number;
@@ -8,8 +12,14 @@ interface PaginationProps {
   params: Record<string, string | undefined>;
 }
 
-/** Numbered pagination — plain links so it works from RSC without JS. */
+/**
+ * Numbered pagination — plain links so it works from RSC without JS.
+ * Arrow-key roving focus inside the nav (§7 keyboard operability): Left/
+ * Right move focus between page links; the browser follows the link on
+ * Enter as usual. Mouse behavior unchanged.
+ */
 export function Pagination({ page, totalPages, basePath, params }: PaginationProps) {
+  const navRef = useRef<HTMLElement>(null);
   if (totalPages <= 1) return null;
 
   const makeHref = (target: number) => {
@@ -32,8 +42,20 @@ export function Pagination({ page, totalPages, basePath, params }: PaginationPro
       active ? 'bg-primary font-semibold text-black' : 'border border-border bg-card text-fg hover:border-primary'
     }`;
 
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const links = Array.from(navRef.current?.querySelectorAll<HTMLAnchorElement>('a[href]') ?? []);
+    const index = links.indexOf(document.activeElement as HTMLAnchorElement);
+    if (index === -1) return;
+    const next = event.key === 'ArrowRight' ? index + 1 : index - 1;
+    if (next >= 0 && next < links.length) {
+      event.preventDefault();
+      links[next]!.focus();
+    }
+  };
+
   return (
-    <nav aria-label="Sahifalar" className="mt-8 flex flex-wrap items-center justify-center gap-2">
+    <nav ref={navRef} aria-label="Sahifalar" onKeyDown={onKeyDown} className="mt-8 flex flex-wrap items-center justify-center gap-2">
       {page > 1 ? (
         <Link href={makeHref(page - 1)} rel="prev" className={linkClass(false)} aria-label="Oldingi sahifa">
           ‹

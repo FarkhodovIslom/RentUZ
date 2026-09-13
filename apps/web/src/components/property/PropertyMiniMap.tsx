@@ -30,6 +30,10 @@ export function PropertyMiniMap({ lng, lat, label }: { lng: number; lat: number;
       center: [lng, lat],
       zoom: 14,
       interactive: false,
+      // §7 nested-interactive: the compact attribution control puts a
+      // focusable <summary> inside this role="img" — axe serious. The
+      // static attribution line below satisfies the OSM license instead.
+      attributionControl: false,
     });
     new maplibregl.Marker({ color: '#FFA31A' }).setLngLat([lng, lat]).addTo(map);
     mapRef.current = map;
@@ -40,11 +44,16 @@ export function PropertyMiniMap({ lng, lat, label }: { lng: number; lat: number;
   }, [lng, lat]);
 
   return (
-    <div
-      ref={containerRef}
-      role="img"
-      aria-label={`${label} — joylashuv xaritada`}
-      className="h-64 overflow-hidden rounded-[16px] border border-border"
-    />
+    <figure className="overflow-hidden rounded-[16px] border border-border">
+      <div
+        ref={containerRef}
+        role="img"
+        aria-label={`${label} — joylashuv xaritada`}
+        className="h-64"
+      />
+      <figcaption className="bg-card px-3 py-1.5 text-[11px] text-fg-muted">
+        © OpenStreetMap contributors
+      </figcaption>
+    </figure>
   );
 }

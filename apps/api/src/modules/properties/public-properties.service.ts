@@ -133,6 +133,7 @@ export class PublicPropertiesService {
         memberSince: prop.owner.createdAt,
         isPhoneVerified: prop.owner.isPhoneVerified,
       },
+      regionName: prop.region?.name ?? null,
       similar,
       createdAt: prop.createdAt,
     };

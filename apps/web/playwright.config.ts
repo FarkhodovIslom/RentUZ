@@ -16,6 +16,18 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
+    // The cookie banner (Phase 8) would overlay bottom-docked UI in specs;
+    // consent handling has its own component behavior and is not under test
+    // in these flows — start every context as already-dismissed.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://localhost:3000',
+          localStorage: [{ name: 'rentuz:cookie-consent', value: 'dismissed' }],
+        },
+      ],
+    },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [

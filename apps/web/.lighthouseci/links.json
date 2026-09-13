@@ -1,0 +1,6 @@
+{
+  "http://localhost:3000/": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1789310056228-51363.report.html",
+  "http://localhost:3000/rentals": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1789310057528-33130.report.html",
+  "http://localhost:3000/map": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1789310058824-91001.report.html",
+  "http://localhost:3000/login": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1789310059536-50314.report.html"
+}

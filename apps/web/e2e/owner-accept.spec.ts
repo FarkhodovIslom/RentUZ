@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { provisionUser, loginBrowser, provisionProperty, submitRequest } from './helpers';
+import { provisionUser, loginBrowser, provisionProperty, submitRequest, csrfHeaders } from './helpers';
 
 /**
  * §3 — owner accepts a pending request; the row flips to Qabul qilingan and
@@ -10,7 +10,9 @@ test('owner accepts a request and the property leaves search', async ({ page }) 
 
   // Tenant submits via the API (the browser flow is covered by its own spec).
   const tenant = await provisionUser();
+  const csrf = await csrfHeaders(page.request);
   const login = await page.request.post('/api/v1/auth/login', {
+    headers: csrf,
     data: { phone: tenant.phone, password: tenant.password },
   });
   const tenantToken = (await login.json()).data.accessToken as string;

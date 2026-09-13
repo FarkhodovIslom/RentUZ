@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ImagesModule } from '../../common/services/images.module.js';
+import { HealthModule } from '../../health/health.module.js';
 import { FxRatesProcessor, OrphanImagesProcessor } from './jobs.processor.js';
 import { CompleteRentalsProcessor } from './complete-rentals.processor.js';
 import { ExpirePendingRequestsProcessor } from './expire-pending-requests.processor.js';
@@ -33,6 +34,7 @@ import { RentalRequestsModule } from '../rental-requests/rental-requests.module.
       { name: 'notifications-cleanup' },
     ),
     ImagesModule, // provides S3 client to the orphan processor
+    HealthModule, // exports MetricsController for the queue-backlog gauge
     RentalRequestsModule, // complete-rentals / expire-pending processors
   ],
   controllers: [JobsAdminController],

@@ -107,9 +107,11 @@ export const OwnerCardDTO = z.object({
 export type OwnerCardDTOT = z.infer<typeof OwnerCardDTO>;
 
 /** Public details (§20): full property minus owner-sensitive fields, plus the
- *  owner card and similar listings. Owner email/phone are structurally absent. */
+ *  owner card and similar listings. Owner email/phone are structurally absent.
+ *  `regionName` feeds the §69 SEO title format on the details page. */
 export const PublicPropertyDetailDTO = PropertyDetailDTO.omit({ ownerId: true, status: true }).extend({
   ownerCard: OwnerCardDTO,
+  regionName: z.string().nullable(),
   similar: z.array(PropertyCardDTO),
 });
 export type PublicPropertyDetailDTOT = z.infer<typeof PublicPropertyDetailDTO>;

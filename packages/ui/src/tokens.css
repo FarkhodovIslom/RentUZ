@@ -16,7 +16,9 @@
   /* Text */
   --color-fg: #ffffff;
   --color-fg-secondary: #a1a1a1;
-  --color-fg-muted: #6f6f6f;
+  /* 5.4:1 on bg / 5.1:1 on card — muted still passes WCAG AA at body size
+     (§7 audit: #6f6f6f was 3.99:1 on bg and failed). */
+  --color-fg-muted: #858585;
 
   /* Accent — warm yellow, ~5% of the interface (CTA, active nav, price, verified) */
   --color-primary: #ffa31a;

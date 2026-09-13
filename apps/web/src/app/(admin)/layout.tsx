@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { getSession } from '@/lib/session';
 import { Sidebar } from '@/components/owner/Sidebar';
+import { SkipLink } from '@/components/nav/SkipLink';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 /**
@@ -30,8 +31,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="flex min-h-dvh">
+      <SkipLink />
       <Sidebar items={items} userName={session.name} />
-      <main className="flex-1 p-6 md:p-8">
+      <main id="main-content" className="flex-1 p-6 md:p-8">
         <div className="mb-2 flex justify-end">
           <NotificationBell />
         </div>

@@ -15,32 +15,96 @@ import { formatPriceUzs, TYPE_OPTIONS } from '@/components/search/filter-utils';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const SITE_URL = () => process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
 async function loadProperty(slug: string): Promise<PublicPropertyDetailDTOT | null> {
   try {
-    return await serverApiGet<PublicPropertyDetailDTOT>(`/public/properties/${slug}`);
+    return await serverApiGet<PublicPropertyDetailDTOT>(`/public/properties/${slug}`, { next: { revalidate: 600 } });
   } catch (error) {
     if (error instanceof ServerApiError && error.status === 404) return null;
     throw error;
   }
 }
 
+/** Top 500 ACTIVE listings pre-rendered at build; the rest ISR on demand (§69). */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  try {
+    const payload = await serverApiGet<{ data: { slug: string }[] }>(
+      '/search/properties?limit=100&page=1&sort=views',
+      { next: { revalidate: 600 } },
+    );
+    return payload.data.slice(0, 500).map((card) => ({ slug: card.slug }));
+  } catch {
+    // API down at build time — plain ISR fallback.
+    return [];
+  }
+}
+
+export const revalidate = 600;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const property = await loadProperty(slug);
-  if (!property) return { title: 'E’lon topilmadi' };
+  if (!property) return { title: 'E’lon topilmadi', robots: { index: false } };
+
+  // §69 title format: `${title} — ${rooms} xona, ${area} m², ${city} | RentUZ`
+  const city = property.regionName ?? 'O‘zbekiston';
+  const title = `${property.title} — ${property.rooms} xona, ${Math.round(property.area)} m², ${city}`;
   const description = property.description.slice(0, 160);
+  const canonical = `/property/${property.slug}`;
+
   return {
-    title: property.title,
+    title,
     description,
+    alternates: { canonical },
     openGraph: {
-      title: property.title,
+      title,
+      description,
+      url: canonical,
+      siteName: 'RentUZ',
+      type: 'website',
+      images: property.mainImageUrl ? [{ url: property.mainImageUrl }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
       description,
       images: property.mainImageUrl ? [property.mainImageUrl] : undefined,
     },
+  };
+}
+
+/** schema.org RealEstateListing JSON-LD (§69 item 3). */
+function realEstateListingJsonLd(property: PublicPropertyDetailDTOT): Record<string, unknown> {
+  const base = SITE_URL();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.title,
+    url: `${base}/property/${property.slug}`,
+    description: property.description.slice(0, 300),
+    image: property.images.slice(0, 6).map((img) => img.url),
+    datePosted: property.createdAt,
+    offers: {
+      '@type': 'Offer',
+      price: property.currency === 'UZS' ? property.priceUzs : property.price,
+      priceCurrency: property.currency,
+      availability: 'https://schema.org/InStock',
+    },
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: property.address,
+      addressRegion: property.regionName ?? undefined,
+      addressCountry: 'UZ',
+    },
+    ...(property.lat !== null && property.lng !== null
+      ? { geo: { '@type': 'GeoCoordinates', latitude: property.lat, longitude: property.lng } }
+      : {}),
+    floorSize: { '@type': 'QuantitativeValue', value: Math.round(property.area), unitCode: 'MTK' },
   };
 }
 
@@ -92,6 +156,14 @@ export default async function PropertyDetailsPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 md:pb-10">
+      {/* §69 JSON-LD — `</script>` and `<!--` neutralized so a malicious
+          description can't break out of the script element. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(realEstateListingJsonLd(property)).replace(/</g, '\\u003c'),
+        }}
+      />
       <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-8">
           <PropertyGallery

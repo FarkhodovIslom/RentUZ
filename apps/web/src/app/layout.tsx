@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { Toaster } from '@/components/ui/Toaster';
+import { CookieBanner } from '@/components/CookieBanner';
 import './globals.css';
 
 const inter = Inter({
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <QueryProvider>
             {children}
             <Toaster />
+            <CookieBanner />
           </QueryProvider>
         </NextIntlClientProvider>
       </body>

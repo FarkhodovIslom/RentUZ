@@ -2,6 +2,59 @@
 
 > Cross-cutting decisions live in `0_Phase.md`. This is the final hardening phase before launch: SEO pass on the public surface, accessibility sweep, security checklist, Sentry + monitoring, production deployment runbook, and a final audit against the §100 Definition of Done.
 
+## Completion status (2026-09-13, `feature/phase-8-hardening`)
+
+**Implemented and verified** — full verification matrix green: lint, typecheck,
+unit 199, integration 110, E2E 30/30 (incl. a11y suite 13/13), Lighthouse
+assertions, bundle budget, migration + clean-checkout seed. DoD audit in
+`apps/web/docs/dod.md`; UI states in `apps/web/docs/ui-states.md`.
+
+Pre-existing pieces confirmed (were shipped in earlier phases, Phase 8 kept them):
+`robots.ts`/`sitemap.ts` (now extended), UUID→slug redirect, `/health`+`/ready`
+(plus new `/metrics`), Helmet, `pausedReason` migration (Phase 7).
+
+New in Phase 8, by section:
+- **§1.1 SEO**: sitemap pagination (50k chunks via `generateSitemaps`), robots
+  additions, full property metadata (title format, canonical, OG/Twitter),
+  JSON-LD `RealEstateListing`, `generateStaticParams` (top 500) + ISR +
+  API→web revalidation hook, page-level metadata, manifest + icon,
+  `NEXT_PUBLIC_SITE_URL`. `PublicPropertyDetailDTO` gained `regionName`.
+- **§1.2 A11y**: `e2e/a11y.spec.ts` + `test:a11y` (serious/critical gate on 9
+  pages), keyboard tests (skip link, Esc+focus-return modal, arrow pagination),
+  fg-muted token AA fix, SkipLink in all layouts, `prefers-reduced-motion`,
+  MapLibre attribution contrast, contrast math documented in
+  `apps/web/docs/a11y.md`.
+- **§1.3 Security**: CSRF double-submit (API `/csrf`, BFF header check, web
+  wrapper + socket/attachment/read-receipt carriers), CSP header via
+  `src/proxy.ts` (Turbopack nonce unsupported — documented), gitleaks CI,
+  security test suites (rate-limit 429, tampered/wrong-audience JWT, SQLi,
+  XSS-as-text, SVG/polyglot rejects with a new EOI-tail guard, public
+  serializer privacy, admin audit-coverage metadata gate with documented
+  `verification/:id/claim` exemption).
+- **§1.4 Performance**: next/image (grid + hero priority), images config
+  (WebP, Supabase/S3/R2 hosts), 200 KB bundle budget (`size-check`, lazy
+  maplibre at 400 KB), `EXPLAIN` snapshots in `apps/api/docs/perf.md`
+  (owner-active partial index verified), Lighthouse CI job (thresholds
+  −5 vs local), pagination/caching audits.
+- **§1.5 Monitoring**: Sentry web+API (DSN-gated, PII scrub tested),
+  `/metrics` prom-client (HTTP histogram, WS gauge, queue backlog, defaults),
+  `LOG_TRANSPORT=production` pino piping, `apps/api/docs/operations.md`
+  (alerts, log sample, job crons, launch gates).
+- **§1.6 Deployment**: `apps/web/vercel.json`, `render.yaml`, full runbook in
+  `apps/api/docs/deployment.md` (Supabase split URLs, buckets, DNS table,
+  post-deploy smoke, pre-launch items), CI expanded (services, integration,
+  gitleaks, E2E, Lighthouse; deploy via Vercel/Render GitHub integrations).
+- **§1.7/§1.8**: `apps/web/docs/dod.md` + `ui-states.md`; CookieBanner
+  (+ E2E spec), `/privacy` + `/terms` placeholder content (legal review
+  owner-assigned).
+- **DB**: migration `20260913090000` (`properties_owner_active_idx`, GiST
+  re-add per trap 18); Phase-1 locations seed restored into `seed.ts`
+  (clean-checkout `migrate deploy + db:seed` verified on a scratch DB).
+
+Out of code (pre-launch checklist, `deployment.md` §7): SMS provider, MapTiler
+key, domain/DNS, paid tiers, CBU re-verify, Sentry DSNs, log aggregator,
+sitemap load check, pentest.
+
 ## Goal
 RentUZ is production-ready: every public page is fast, accessible, indexed correctly, and visible to search engines; every security control from §53 is on; the API and web are both monitored; deploys are reproducible; the §100 DoD checklist passes line by line; and the documented risks/escape hatches from prior phases are reviewed with explicit status.
 

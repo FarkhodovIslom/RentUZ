@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { AttachmentMetaT } from '@rentuz/contracts';
 import { toast } from '../ui/Toaster';
+import { fetchCsrfToken } from '@/lib/api';
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -40,10 +41,12 @@ export function AttachmentUpload({
       for (const file of valid.slice(0, MAX_FILES)) {
         const form = new FormData();
         form.append('files', file);
+        const csrfToken = await fetchCsrfToken().catch(() => '');
         const response = await fetch(`/api/v1/conversations/${conversationId}/attachments`, {
           method: 'POST',
           body: form,
           credentials: 'same-origin',
+          headers: csrfToken ? { 'x-rentuz-csrf': csrfToken } : undefined,
         });
         if (!response.ok) {
           const payload = (await response.json().catch(() => null)) as { message?: string } | null;

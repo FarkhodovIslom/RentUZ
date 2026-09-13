@@ -1,6 +1,7 @@
 'use client';
 
 import { io, type Socket } from 'socket.io-client';
+import { fetchCsrfToken } from './api';
 import type { MessageDTOT } from '@rentuz/contracts';
 
 /**
@@ -47,8 +48,18 @@ export type RentuzSocket = Socket<ServerEvents, ClientEvents>;
 
 let socket: RentuzSocket | null = null;
 
+/**
+ * POST /realtime/ticket goes through the BFF like every mutating call and
+ * carries the CSRF double-submit header (Phase 8, §53). The 60s single-use
+ * JWT it returns authenticates the raw WS handshake to the API origin.
+ */
 async function fetchTicket(): Promise<string> {
-  const response = await fetch('/api/v1/realtime/ticket', { method: 'POST', credentials: 'same-origin' });
+  const csrfToken = await fetchCsrfToken().catch(() => '');
+  const response = await fetch('/api/v1/realtime/ticket', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: csrfToken ? { 'x-rentuz-csrf': csrfToken } : undefined,
+  });
   if (!response.ok) {
     throw new Error('ticket fetch failed');
   }

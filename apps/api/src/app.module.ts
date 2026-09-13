@@ -16,6 +16,7 @@ import { FeatureFlagsModule } from './common/services/feature-flags.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { HealthModule } from './health/health.module.js';
+import { CsrfModule } from './common/csrf/csrf.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PropertiesModule } from './modules/properties/properties.module.js';
@@ -42,6 +43,7 @@ import { AdminPropertiesModule } from './modules/admin-properties/admin-properti
     EventBusModule,
     FeatureFlagsModule,
     HealthModule,
+    CsrfModule,
     AuthModule,
     UsersModule,
     PropertiesModule,

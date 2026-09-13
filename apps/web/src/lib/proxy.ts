@@ -1,13 +1,21 @@
 import type { NextRequest } from 'next/server';
+import { CSRF_COOKIE, CSRF_HEADER } from '@rentuz/contracts';
 
 /**
  * BFF proxy (0_Phase.md §2 "Auth transport"): the browser only ever calls
  * same-origin `/api/v1/...`; this handler forwards to INTERNAL_API_URL with
  * cookies attached. `Set-Cookie` responses get their `Domain=` attribute
  * stripped so cookies stay host-only on the web origin (§53).
+ *
+ * CSRF (8_Phase.md §1.3 item 14): mutating methods must present the
+ * double-submit token — `x-rentuz-csrf` header matching the HttpOnly
+ * `rentuz_csrf` cookie. Attacker pages can force cookie sends (top-level
+ * form posts) but cannot read the cookie to forge the header.
  */
 
 const INTERNAL_API_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:4000';
+
+const MUTATING = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 const HOP_BY_HOP = new Set([
   'connection',
@@ -33,6 +41,20 @@ export async function proxy(request: NextRequest, path: string[]): Promise<Respo
     `/api/v1/${path.join('/')}${request.nextUrl.search}`,
     INTERNAL_API_URL,
   );
+
+  // CSRF double-submit — exempt /csrf itself (issues the token) and
+  // /auth/refresh (cookie-rotating POST fired by the API client on 401).
+  const route = path.join('/');
+  if (MUTATING.has(request.method) && route !== 'csrf' && route !== 'auth/refresh') {
+    const cookieToken = request.cookies.get(CSRF_COOKIE)?.value;
+    const headerToken = request.headers.get(CSRF_HEADER);
+    if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+      return Response.json(
+        { success: false, message: 'CSRF token noto‘g‘ri', error: { code: 'FORBIDDEN' } },
+        { status: 403 },
+      );
+    }
+  }
 
   const headers = new Headers();
   for (const [name, value] of request.headers) {

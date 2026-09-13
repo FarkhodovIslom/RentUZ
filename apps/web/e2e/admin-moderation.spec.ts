@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { loginBrowser, provisionProperty, provisionUser } from './helpers';
+import { loginBrowser, provisionProperty, provisionUser, csrfHeaders } from './helpers';
 
 /**
  * Phase 7 E2E (7_Phase.md §3): two admin contexts. The seeded admins
@@ -43,7 +43,8 @@ async function newAdminPage(
 
 /** Flip a runtime flag through the BFF using the page's admin session. */
 async function setFlag(page: Page, body: Record<string, boolean>): Promise<void> {
-  const res = await page.request.patch('/api/v1/admin/flags', { data: body });
+  const csrf = await csrfHeaders(page.request);
+  const res = await page.request.patch('/api/v1/admin/flags', { headers: csrf, data: body });
   expect(res.ok()).toBeTruthy();
 }
 
@@ -100,6 +101,7 @@ test.describe('Phase 7 admin moderation', () => {
     const reporterPage = await reporterContext.newPage();
     await loginBrowser(reporterPage, reporter);
     const created = await reporterPage.request.post('/api/v1/reports', {
+      headers: await csrfHeaders(reporterPage.request),
       data: { targetType: 'PROPERTY', targetId: property.id, reason: 'SCAM' },
     });
     expect(created.ok()).toBeTruthy();

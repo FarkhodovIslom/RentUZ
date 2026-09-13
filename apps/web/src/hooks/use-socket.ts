@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { fetchCsrfToken } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConversationDTOT, MessageDTOT } from '@rentuz/contracts';
 import { getSocket } from '@/lib/socket-client';
@@ -54,7 +55,14 @@ export function useSocket(activeConversationId?: string | null): void {
         };
       });
       if (message.conversationId === activeConversationId) {
-        void fetch(`/api/v1/conversations/${message.conversationId}/read`, { method: 'POST', credentials: 'same-origin' });
+        void (async () => {
+          const csrfToken = await fetchCsrfToken().catch(() => '');
+          await fetch(`/api/v1/conversations/${message.conversationId}/read`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: csrfToken ? { 'x-rentuz-csrf': csrfToken } : undefined,
+          });
+        })();
       }
     };
 

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { request as pwRequest } from '@playwright/test';
-import { loginBrowser, provisionProperty, provisionUser, submitRequest, type TestUser } from './helpers';
+import { loginBrowser, provisionProperty, provisionUser, submitRequest, type TestUser, csrfHeaders } from './helpers';
 
 /**
  * Phase 6 E2E (6_Phase.md §3): badge reacts to a lifecycle event, the bell
@@ -9,8 +9,10 @@ import { loginBrowser, provisionProperty, provisionUser, submitRequest, type Tes
 
 async function loginTokenApi(user: TestUser): Promise<string> {
   const api = await pwRequest.newContext({ baseURL: 'http://localhost:3000' });
+  const csrf = await csrfHeaders(api);
   try {
     const res = await api.post('/api/v1/auth/login', {
+      headers: csrf,
       data: { phone: user.phone, password: user.password },
     });
     return (await res.json()).data.accessToken as string;
@@ -27,8 +29,9 @@ test('tenant sees REQUEST_ACCEPTED badge → popover → Bugun section; mark-all
 
   // Owner accepts via the API (owner-accept UI flow has its own spec).
   const api = await pwRequest.newContext({ baseURL: 'http://localhost:3000' });
+  const acceptCsrf = await csrfHeaders(api);
   const accept = await api.patch(`/api/v1/rental-requests/${req.id}`, {
-    headers: { Authorization: `Bearer ${(await loginTokenApi(owner))}` },
+    headers: { Authorization: `Bearer ${(await loginTokenApi(owner))}`, ...acceptCsrf },
     data: { status: 'ACCEPTED' },
   });
   expect(accept.ok()).toBeTruthy();
@@ -61,13 +64,14 @@ test('owner price change → favoriting tenant sees PRICE_CHANGED (fan-out limit
   const fanToken = await loginTokenApi(fan);
 
   const api = await pwRequest.newContext({ baseURL: 'http://localhost:3000' });
+  const csrf = await csrfHeaders(api);
   const fav = await api.post(`/api/v1/favorites/${id}`, {
-    headers: { Authorization: `Bearer ${fanToken}` },
+    headers: { Authorization: `Bearer ${fanToken}`, ...csrf },
   });
   expect(fav.ok()).toBeTruthy();
 
   const priceRes = await api.patch(`/api/v1/properties/${id}/price`, {
-    headers: { Authorization: `Bearer ${(await loginTokenApi(owner))}` },
+    headers: { Authorization: `Bearer ${(await loginTokenApi(owner))}`, ...csrf },
     data: { price: 6_900_000, currency: 'UZS' },
   });
   expect(priceRes.ok()).toBeTruthy();

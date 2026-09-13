@@ -1,4 +1,4 @@
-import { request, type Page } from '@playwright/test';
+import { request, type APIResponse, type Page } from '@playwright/test';
 
 /**
  * Shared helpers for the Phase 3 E2E specs (3_Phase.md §3). User provisioning
@@ -13,6 +13,18 @@ export interface TestUser {
   password: string;
 }
 
+/**
+ * CSRF double-submit header for BFF mutating calls (Phase 8, §53): the BFF
+ * rejects POST/PATCH/DELETE without `x-rentuz-csrf` matching the HttpOnly
+ * cookie. Any request context must first GET /csrf (sets the cookie in its
+ * jar) and echo the returned token.
+ */
+export async function csrfHeaders(api: { get: (url: string) => Promise<APIResponse> }): Promise<Record<string, string>> {
+  const res = await api.get('/api/v1/csrf');
+  const body = (await res.json()) as { data: { token: string } };
+  return { 'x-rentuz-csrf': body.data.token };
+}
+
 export const TEST_PASSWORD = 'parole2etest123';
 
 export function uniquePhone(): string {
@@ -24,12 +36,15 @@ export async function provisionUser(): Promise<TestUser> {
   const user: TestUser = { phone: uniquePhone(), password: TEST_PASSWORD };
   const api = await request.newContext({ baseURL: 'http://localhost:3000' });
   try {
+    const csrf = await csrfHeaders(api);
     const register = await api.post('/api/v1/auth/register', {
+      headers: csrf,
       data: { name: 'E2E Tester', phone: user.phone, password: user.password },
     });
     if (!register.ok()) throw new Error(`register failed: ${register.status()}`);
     const otp = ((await register.json()).data.otpDev as string) ?? '';
     await api.post('/api/v1/auth/verify-phone', {
+      headers: csrf,
       data: { phone: user.phone, code: otp, purpose: 'REGISTRATION' },
     });
   } finally {
@@ -40,7 +55,9 @@ export async function provisionUser(): Promise<TestUser> {
 
 /** Log in through the BFF from the page context — cookies persist in the browser. */
 export async function loginBrowser(page: Page, user: TestUser): Promise<void> {
+  const csrf = await csrfHeaders(page.request);
   const response = await page.request.post('/api/v1/auth/login', {
+    headers: csrf,
     data: { phone: user.phone, password: user.password },
   });
   if (!response.ok()) throw new Error(`login failed: ${response.status()}`);
@@ -66,8 +83,10 @@ export async function provisionProperty(): Promise<{
 }> {
   const owner = await provisionUser();
   const api = await request.newContext({ baseURL: 'http://localhost:3000' });
+  const csrf = await csrfHeaders(api);
   try {
     const login = await api.post('/api/v1/auth/login', {
+      headers: csrf,
       data: { phone: owner.phone, password: owner.password },
     });
     if (!login.ok()) throw new Error(`owner login failed: ${login.status()}`);
@@ -79,12 +98,12 @@ export async function provisionProperty(): Promise<{
       (l) => l.kind === 'REGION',
     )?.id;
 
-    const draft = await api.post('/api/v1/properties', { headers: auth });
+    const draft = await api.post('/api/v1/properties', { headers: { ...auth, ...csrf } });
     if (!draft.ok()) throw new Error(`draft failed: ${draft.status()}`);
     const property = (await draft.json()).data as { id: string };
 
     const patch = await api.patch(`/api/v1/properties/${property.id}`, {
-      headers: auth,
+      headers: { ...auth, ...csrf },
       data: {
         title: 'E2E Ijara uyi — Toshkent markazi',
         description: 'E2E sinov uchun yaratilgan e\'lon. Hammasi joyida, toza va yorug\'.',
@@ -101,7 +120,7 @@ export async function provisionProperty(): Promise<{
     });
     if (!patch.ok()) throw new Error(`patch failed: ${patch.status()} ${await patch.text()}`);
 
-    const submit = await api.post(`/api/v1/properties/${property.id}/submit`, { headers: auth });
+    const submit = await api.post(`/api/v1/properties/${property.id}/submit`, { headers: { ...auth, ...csrf } });
     if (!submit.ok()) throw new Error(`submit failed: ${submit.status()}`);
 
     // The draft/submit responses carry no slug — read it back from the owner view.
@@ -118,9 +137,10 @@ export async function provisionProperty(): Promise<{
 /** Submit a rental request via the API (tenant side, faster than the UI). */
 export async function submitRequest(token: string, propertyId: string): Promise<{ id: string }> {
   const api = await request.newContext({ baseURL: 'http://localhost:3000' });
+  const csrf = await csrfHeaders(api);
   try {
     const res = await api.post('/api/v1/rental-requests', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...csrf },
       data: {
         propertyId,
         message: 'E2E: Bu uy ijaraga olishim mumkinmi? Sharhlaringizni kutaman.',

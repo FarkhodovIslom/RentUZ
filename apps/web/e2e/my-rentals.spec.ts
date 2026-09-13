@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { provisionUser, loginBrowser, provisionProperty, submitRequest } from './helpers';
+import { provisionUser, loginBrowser, provisionProperty, submitRequest, csrfHeaders } from './helpers';
 
 /**
  * §3 — after the owner accepts, the tenant sees the rental under /my-rentals
@@ -9,13 +9,16 @@ test('tenant sees the active rental in my-rentals', async ({ page }) => {
   const { id, owner } = await provisionProperty();
 
   const tenant = await provisionUser();
+  const csrf = await csrfHeaders(page.request);
   const login = await page.request.post('/api/v1/auth/login', {
+    headers: csrf,
     data: { phone: tenant.phone, password: tenant.password },
   });
   const tenantToken = (await login.json()).data.accessToken as string;
   await submitRequest(tenantToken, id);
 
   const ownerLogin = await page.request.post('/api/v1/auth/login', {
+    headers: csrf,
     data: { phone: owner.phone, password: owner.password },
   });
   const ownerToken = (await ownerLogin.json()).data.accessToken as string;
@@ -24,7 +27,7 @@ test('tenant sees the active rental in my-rentals', async ({ page }) => {
   });
   const requestId = ((await requests.json()).data.data as Array<{ id: string }>)[0].id;
   await page.request.patch(`/api/v1/rental-requests/${requestId}`, {
-    headers: { Authorization: `Bearer ${ownerToken}` },
+    headers: { Authorization: `Bearer ${ownerToken}`, ...csrf },
     data: { status: 'ACCEPTED' },
   });
 

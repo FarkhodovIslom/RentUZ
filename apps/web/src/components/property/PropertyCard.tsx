@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { VerificationBadge } from './VerificationBadge';
 
@@ -39,11 +40,14 @@ export function PropertyCard({ property }: { property: CardData }) {
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-elevated">
         {property.mainImageUrl ? (
-                    <img
+          // §68: grid images get responsive variants + lazy loading below the
+          // fold; `priority` is reserved for the details-page hero.
+          <Image
             src={property.mainImageUrl}
             alt={property.title}
-            loading="lazy"
-            className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            className="object-cover transition-opacity group-hover:opacity-90"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-fg-muted">Rasm yo'q</div>

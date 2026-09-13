@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 interface GalleryImage {
   id: string;
@@ -47,7 +48,15 @@ export function PropertyGallery({ images, title }: { images: GalleryImage[]; tit
           aria-label="Rasmlarni kattalashtirish"
           className="relative aspect-[4/3] overflow-hidden rounded-[16px] bg-elevated lg:aspect-auto lg:min-h-[420px]"
         >
-          <img src={images[0].url} alt={title} className="h-full w-full object-cover" />
+          {/* §68: above-the-fold hero — priority + responsive sizes. */}
+          <Image
+            src={images[0].url}
+            alt={title}
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 60vw"
+            className="object-cover"
+          />
         </button>
         {thumbs.length > 0 ? (
           <div className="grid grid-cols-4 gap-2 lg:grid-cols-2">

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import * as Sentry from '@sentry/nestjs';
 import { Logger } from '@nestjs/common';
 import { StandardSchemaValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -19,7 +20,90 @@ import {
 import { AppModule } from './app.module.js';
 import { RedisIoAdapter } from './modules/realtime/redis-io.adapter.js';
 
+/** §99 PII scrub for outbound Sentry events (8_Phase.md §5). */
+const SENTRY_PII_KEYS = new Set([
+  'phone',
+  'phonenumber',
+  'email',
+  'password',
+  'passwordhash',
+  'tokenhash',
+  'refreshtoken',
+  'accesstoken',
+  'authorization',
+  'otp',
+  'otpdev',
+]);
+
+function scrubValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(scrubValue);
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = SENTRY_PII_KEYS.has(key.toLowerCase()) ? '***' : scrubValue(val);
+    }
+    return out;
+  }
+  if (typeof value === 'string' && /^\+998\d{9}$/.test(value)) return '***';
+  return value;
+}
+
+type Scrubbable = {
+  user?: Record<string, unknown>;
+  request?: { headers?: unknown; data?: unknown };
+  extra?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+const SentryScrub = {
+  scrub(eventIn: unknown): unknown {
+    const event = eventIn as Scrubbable;
+    if (event.user) {
+      delete event.user.email;
+      delete event.user.phoneNumber;
+      delete event.user.ip_address;
+    }
+    if (event.request) {
+      delete event.request.headers;
+      if (typeof event.request.data === 'object' && event.request.data !== null) {
+        event.request.data = scrubValue(event.request.data);
+      }
+    }
+    if (event.extra) event.extra = scrubValue(event.extra) as Record<string, unknown>;
+    return event;
+  },
+};
+
 async function bootstrap(): Promise<void> {
+  // §71/§72: LOG_TRANSPORT=production pipes Nest's Logger into pino with a
+  // JSON-disk transport (the aggregator's collector picks it up); otherwise
+  // the console logger stays as-is (dev/CI keep readable output).
+  if (process.env.LOG_TRANSPORT === 'production') {
+    const { pino } = await import('pino');
+    const logger = pino({
+      level: process.env.LOG_LEVEL ?? 'info',
+      timestamp: pino.stdTimeFunctions.isoTime,
+      redact: ['req.headers.authorization', 'passwordHash', '*.phone', '*.email'],
+    });
+    Logger.overrideLogger(logger as unknown as Console);
+  }
+
+  // Sentry (8_Phase.md §1.5 item 31) — DSN-gated: no DSN, no SDK. Init before
+  // the app starts so boot errors capture too. PII scrub: phone/email/
+  // passwordHash/tokenHash/Authorization never leave the process (§99).
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      release: process.env.RENDER_GIT_COMMIT ?? 'dev',
+      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+      sendDefaultPii: false,
+      beforeSend(event) {
+        return SentryScrub.scrub(event) as typeof event;
+      },
+    });
+  }
+
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
@@ -39,7 +123,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({ origin: corsOrigins, credentials: true });
 
   // /health and /ready stay outside the API prefix (§72; Render health path).
-  app.setGlobalPrefix('api/v1', { exclude: ['health', 'ready'] });
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'ready', 'metrics'] });
 
   if (configService.get('NODE_ENV') !== 'production') {
     const swaggerConfig = new DocumentBuilder()

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/session';
 import { Navbar } from '../../components/nav/Navbar';
+import { SkipLink } from '../../components/nav/SkipLink';
 import { BottomNav } from '../../components/nav/BottomNav';
 
 /**
@@ -17,6 +18,7 @@ export default async function TenantLayout({ children }: { children: ReactNode }
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <SkipLink />
       <Navbar />
       {!session.isPhoneVerified ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/30 bg-primary/10 px-4 py-3">
@@ -32,7 +34,7 @@ export default async function TenantLayout({ children }: { children: ReactNode }
           </a>
         </div>
       ) : null}
-      <main className="flex-1 pb-24 md:pb-0">{children}</main>
+      <main id="main-content" className="flex-1 pb-24 md:pb-0">{children}</main>
       <BottomNav />
     </div>
   );

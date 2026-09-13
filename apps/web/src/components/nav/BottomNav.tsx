@@ -1,6 +1,9 @@
-import { getTranslations } from 'next-intl/server';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChatBadge } from '@/components/chat/ChatBadge';
-import { getSession } from '@/lib/session';
+import { api } from '@/lib/api';
 
 const ITEMS = [
   { href: '/', key: 'home' },
@@ -12,16 +15,40 @@ const ITEMS = [
   { href: '/profile', key: 'profile' },
 ] as const;
 
-/** Mobile bottom navigation — spec §6 (7 slots since Phase 5 chat, 44px+ touch targets). */
-export async function BottomNav() {
-  const t = await getTranslations('nav');
-  const session = await getSession();
-  const items = session?.role === 'ADMIN' ? [...ITEMS, { href: '/admin', key: 'admin' } as const] : ITEMS;
+/**
+ * Mobile bottom navigation — spec §6 (7 slots since Phase 5 chat, 44px+ touch
+ * targets; admins get an 8th slot, §49). Fully client-side since Phase 8: the
+ * old server `getSession()` read made every public page dynamic and broke
+ * ISR (DYNAMIC_SERVER_USAGE). Translations come from NextIntlClientProvider.
+ * The API's AdminGuard remains the real authorization gate.
+ */
+export function BottomNav() {
+  const t = useTranslations('nav');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ role: string }>('/users/me')
+      .then((me) => {
+        if (!cancelled) setIsAdmin(me.role === 'ADMIN');
+      })
+      .catch(() => {
+        // Anonymous / error — 7 slots.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const items = isAdmin ? [...ITEMS, { href: '/admin', key: 'admin' } as const] : ITEMS;
 
   return (
     <nav
       aria-label="Asosiy navigatsiya"
-      className={`fixed inset-x-0 bottom-0 z-50 ${items.length >= 8 ? 'grid-cols-8' : items.length > 6 ? 'grid-cols-7' : 'grid-cols-6'} grid border-t border-border bg-card md:hidden`}
+      className={`fixed inset-x-0 bottom-0 z-50 grid border-t border-border bg-card md:hidden ${
+        items.length >= 8 ? 'grid-cols-8' : 'grid-cols-7'
+      }`}
     >
       {items.map((item) => (
         <a

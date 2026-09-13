@@ -16,7 +16,9 @@ const STATIC_URLS = ['/', '/rentals', '/map', '/login', '/register', '/forgot-pa
 export async function generateSitemaps(): Promise<{ id: number }[]> {
   let total = 0;
   try {
-    const payload = await serverApiGet<{ meta: { total: number } }>('/search/properties?limit=1');
+    const payload = await serverApiGet<{ meta: { total: number } }>('/search/properties?limit=1', {
+      next: { revalidate: 3600 },
+    });
     total = payload.meta.total;
   } catch {
     // API down — static-only sitemap still ships.
@@ -55,6 +57,7 @@ async function propertyEntries(base: string, offset: number, limit: number): Pro
     while (entries.length < limit) {
       const payload = await serverApiGet<{ data: PropertyCardDTOT[] }>(
         `/search/properties?limit=100&page=${page}`,
+        { next: { revalidate: 3600 } },
       );
       for (const card of payload.data.slice(entries.length === 0 && offsetInPage ? offsetInPage : 0)) {
         if (entries.length >= limit) break;

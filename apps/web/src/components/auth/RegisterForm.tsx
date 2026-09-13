@@ -81,7 +81,7 @@ export function RegisterForm() {
 
       <p className="text-sm text-fg-secondary">
         {t('haveAccount')}{' '}
-        <a href="/login" className="text-primary hover:text-primary-hover">
+        <a href="/login" className="text-primary underline hover:text-primary-hover">
           {t('login')}
         </a>
       </p>

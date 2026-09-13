@@ -84,7 +84,7 @@ export function LoginForm() {
         </a>
         <span>
           {t('noAccount')}{' '}
-          <a href="/register" className="text-primary hover:text-primary-hover">
+          <a href="/register" className="text-primary underline hover:text-primary-hover">
             {t('register')}
           </a>
         </span>

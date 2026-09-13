@@ -23,7 +23,7 @@ interface PageProps {
 
 async function loadProperty(slug: string): Promise<PublicPropertyDetailDTOT | null> {
   try {
-    return await serverApiGet<PublicPropertyDetailDTOT>(`/public/properties/${slug}`);
+    return await serverApiGet<PublicPropertyDetailDTOT>(`/public/properties/${slug}`, { next: { revalidate: 600 } });
   } catch (error) {
     if (error instanceof ServerApiError && error.status === 404) return null;
     throw error;
@@ -35,6 +35,7 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
   try {
     const payload = await serverApiGet<{ data: { slug: string }[] }>(
       '/search/properties?limit=100&page=1&sort=views',
+      { next: { revalidate: 600 } },
     );
     return payload.data.slice(0, 500).map((card) => ({ slug: card.slug }));
   } catch {

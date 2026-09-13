@@ -13,3 +13,29 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/* §7: honor reduced-motion preferences — disable decorative animation;
+   essential transitions (opacity fades used for visibility, not movement)
+   stay fast but non-bouncing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* §7 link-in-text-block + color-contrast: MapLibre's attribution control
+   renders on WHITE when expanded. Stock #404040 text passes AA on white;
+   the MapLibre link inherits the same color and is distinguished by a
+   non-color cue (underline) — the WCAG 1.4.1 alternative. */
+.maplibregl-ctrl-attrib-inner {
+  color: #404040;
+}
+.maplibregl-ctrl-attrib-inner a {
+  color: #404040;
+  text-decoration: underline;
+}

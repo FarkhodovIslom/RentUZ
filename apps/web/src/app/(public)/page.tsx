@@ -8,7 +8,18 @@ import { PropertyCard } from '@/components/property/PropertyCard';
 import { MapDiscovery } from '@/components/map/MapDiscovery';
 
 export const metadata: Metadata = {
-  description: "O'zbekistondagi ijara uylarini narx, hudud va sharoit bo'yicha bir joydan izlang.",
+  title: "O'zbekistonda ijara uy izlash — RentUZ",
+  description:
+    "O'zbekistondagi ijara uylarini narx, hudud va sharoit bo'yicha bir joydan izlang. Tasdiqlangan e'lonlar, xarita va tezkor aloqa.",
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: "O'zbekistonda ijara uy izlash — RentUZ",
+    description:
+      "O'zbekistondagi ijara uylarini narx, hudud va sharoit bo'yicha bir joydan izlang.",
+    url: '/',
+    siteName: 'RentUZ',
+    type: 'website',
+  },
 };
 
 const TRUST_KEYS = ['verified', 'easy', 'map', 'contact'] as const;

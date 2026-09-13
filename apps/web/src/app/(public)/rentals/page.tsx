@@ -11,7 +11,16 @@ import { buildSearchQuery, firstParam, type SearchParamsRecord } from '@/compone
 
 export const metadata: Metadata = {
   title: 'Ijara e’lonlari',
-  description: "O'zbekiston bo'ylab ijara uylarni narx, hudud va sharoit bo'yicha filtrlang.",
+  description:
+    "O'zbekiston bo'ylab ijara uylarni narx, hudud va sharoit bo'yicha filtrlang. Minglab tasdiqlangan e'lonlar.",
+  alternates: { canonical: '/rentals' },
+  openGraph: {
+    title: 'Ijara e’lonlari — RentUZ',
+    description: "O'zbekiston bo'ylab ijara uylarni narx, hudud va sharoit bo'yicha filtrlang.",
+    url: '/rentals',
+    siteName: 'RentUZ',
+    type: 'website',
+  },
 };
 
 interface PaginatedCards {

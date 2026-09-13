@@ -7,7 +7,21 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/favorites', '/owner', '/admin', '/chat', '/profile', '/my-rentals'],
+        // Authenticated + private surfaces must not be crawled (§69).
+        // robots.ts is additive over the file-less default, so list every
+        // private route group explicitly.
+        disallow: [
+          '/api/',
+          '/owner',
+          '/admin',
+          '/chat',
+          '/favorites',
+          '/profile',
+          '/my-rentals',
+          '/rental-requests',
+          '/notifications',
+          '/forbidden',
+        ],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

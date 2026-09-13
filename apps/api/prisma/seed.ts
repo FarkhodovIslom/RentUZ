@@ -1,8 +1,9 @@
 /**
- * RentUZ Phase 2 seed — 8 owners, 20 tenants, 120 properties with sharp-generated
- * placeholder images uploaded to MinIO. Deterministic via `seedrandom`.
- * Idempotent: if the admin phone already exists, the rest of the script
- * still runs upserts keyed by phone/slug.
+ * RentUZ seed — Phase 1 reference data (locations, fx, admin) + Phase 2 demo
+ * data (8 owners, 20 tenants, 120 properties with sharp-generated placeholder
+ * images uploaded to MinIO). Deterministic via `seedrandom`. Idempotent: every
+ * step upserts by stable keys (phone/slug), so `db:migrate && db:seed` works
+ * from a clean checkout (Phase 8 blocker fix).
  */
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';
@@ -16,6 +17,52 @@ import seedrandom from 'seedrandom';
 
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5434/rentuz?schema=public&search_path=public,extensions';
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: DB_URL }) });
+
+/**
+ * Phase 1 reference data — Uzbekistan's 14 regions + districts
+ * (1_Phase.md §1.2). Upserted by slug; safe to re-run. Restored into this file
+ * in Phase 8 so a clean checkout gets a fully seeded database from one script
+ * (the old Phase-2-only seed threw "run Phase 1 seed first" on a fresh DB).
+ */
+const LOCATION_REGIONS = [
+  { name: 'Toshkent shahri', slug: 'tashkent-city', districts: ["Yunusobod", "Chilonzor", "Mirzo Ulug'bek", "Sergeli", "Olmazor", "Shayxontohur", "Yakkasaroy", "Bektemir", "Mirobod", "Uchtepa"] },
+  { name: 'Toshkent viloyati', slug: 'tashkent-region', districts: ["Chirchiq", "Angren", "Olmaliq", "Zangiota", "Qibray"] },
+  { name: 'Samarqand viloyati', slug: 'samarkand', districts: ["Registon", "Samarqand markazi", "Urgut", "Kattaqo'rg'on", "Jomboy"] },
+  { name: 'Buxoro viloyati', slug: 'bukhara', districts: ["Buxoro markazi", "Kogon", "G'ijduvon", "Vobkent"] },
+  { name: 'Andijon viloyati', slug: 'andijan', districts: ["Andijon markazi", "Asaka", "Xonobod", "Shahrixon"] },
+  { name: "Farg'ona viloyati", slug: 'fergana', districts: ["Farg'ona markazi", "Qo'qon", "Marg'ilon", "Quvasoy"] },
+  { name: 'Namangan viloyati', slug: 'namangan', districts: ["Namangan markazi", "Chust", "Pop", "Uchqo'rg'on"] },
+  { name: 'Qashqadaryo viloyati', slug: 'kashkadarya', districts: ["Qarshi", "Shahrisabz", "Kitob", "G'uzor"] },
+  { name: 'Surxondaryo viloyati', slug: 'surkhandarya', districts: ["Termiz", "Denov", "Boysun", "Sherobod"] },
+  { name: 'Jizzax viloyati', slug: 'jizzakh', districts: ["Jizzax markazi", "G'allaorol", "Zomin", "Do'stlik"] },
+  { name: 'Sirdaryo viloyati', slug: 'sirdarya', districts: ["Guliston", "Yangiyer", "Shirin", "Boyovut"] },
+  { name: 'Navoiy viloyati', slug: 'navoiy', districts: ["Navoiy markazi", "Zarafshon", "Nurota", "Karmana"] },
+  { name: 'Xorazm viloyati', slug: 'khorezm', districts: ["Urganch", "Xiva", "Shovot", "Gurlan"] },
+  { name: "Qoraqalpog'iston Respublikasi", slug: 'karakalpakstan', districts: ["Nukus", "Xo'jayli", "Chimboy", "To'rtko'l"] },
+] as const;
+
+async function seedLocations(): Promise<void> {
+  for (const region of LOCATION_REGIONS) {
+    const parent = await prisma.locations.upsert({
+      where: { slug: region.slug },
+      update: { name: region.name },
+      create: { name: region.name, slug: region.slug, kind: 'REGION' },
+    });
+    for (const district of region.districts) {
+      const slug = `${region.slug}-${district
+        .toLowerCase()
+        .replace(/['’]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')}`;
+      await prisma.locations.upsert({
+        where: { slug },
+        update: { name: district },
+        create: { name: district, slug, kind: 'DISTRICT', parentId: parent.id },
+      });
+    }
+  }
+  console.log(`  ${LOCATION_REGIONS.length} regions + districts upserted`);
+}
 
 const s3 = new S3Client({
   endpoint: process.env.STORAGE_ENDPOINT ?? 'http://localhost:9000',
@@ -120,6 +167,10 @@ const ADDRESSES = [
 async function main(): Promise<void> {
   console.log('seed: starting');
 
+  // 0. Reference data — locations (14 regions + districts) must exist before
+  // properties can reference them. Idempotent upserts (Phase 8 clean-checkout fix).
+  await seedLocations();
+
   // 1. Admins (only if not exists). The second admin backs the Phase 7 E2E
   // "two admin contexts" spec — same ADMIN_INITIAL_PASSWORD.
   const adminPhone = process.env.ADMIN_PHONE ?? '+998901234567';
@@ -186,11 +237,8 @@ async function main(): Promise<void> {
   }
   console.log('  20 tenants upserted');
 
-  // 4. Cache regions.
+  // 4. Regions (seeded above — read back for property assignment).
   const regions = await prisma.locations.findMany({ where: { kind: 'REGION' } });
-  if (regions.length === 0) {
-    throw new Error('Run `pnpm db:seed` first (Phase 1 seed) to populate locations.');
-  }
   const regionBySlug = new Map(regions.map((r) => [r.slug, r]));
   const districtsByParent = new Map<string, Awaited<ReturnType<typeof prisma.locations.findMany>>>();
   for (const r of regions) {

@@ -701,5 +701,11 @@
       "openProperty": "E'lonni ko'rish",
       "close": "Yopish"
     }
+  },
+  "cookies": {
+    "bannerLabel": "Cookie bildirishnomasi",
+    "text": "Biz faqat zarur cookie'lardan foydalanamiz — kirish sessiyasi uchun.",
+    "privacy": "Maxfiylik siyosati",
+    "dismiss": "Tushunarli"
   }
 }
